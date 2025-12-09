@@ -6,8 +6,8 @@
         xmlns:local="clr-namespace:TRW.Games.Pong"
         mc:Ignorable="d"
         Title="Pong" Height="450" Width="800" WindowStyle="ThreeDBorderWindow"
-        KeyUp="MainWindow1_KeyUp">
-    <Canvas x:Name="uxGameBoard" Background="#FF1C1E3C" KeyUp="uxGameBoard_KeyUp">
+        KeyUp="uxGameBoard_KeyUp" KeyDown="uxGameBoard_KeyDown" ResizeMode="NoResize">
+    <Canvas x:Name="uxGameBoard" Background="#FF1C1E3C" KeyUp="uxGameBoard_KeyUp" KeyDown="uxGameBoard_KeyDown" Width="auto" Height="auto">
         <local:MainMenu x:Name="uxMainMenu" Canvas.Left="300" Canvas.Top="50" Height="265" Width="200" Visibility="Hidden" KeyUp="uxMainMenu_KeyUp"/>
 
     </Canvas>

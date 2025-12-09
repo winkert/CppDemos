@@ -14,8 +14,22 @@ namespace TRW.GameLibraries.GameCore
         public GameTicker(int elapsed)
         {
             GameTimer = new Timer(elapsed);
-            GameTimer.Start();
             GameTimer.Elapsed += GameTimer_Elapsed;
+            GameTimer.Start();
+        }
+
+        public void GameStart()
+        {
+            GamePlaying = true;
+            GamePaused = false;
+            GameTimer.Start();
+        }
+
+        public void GamePause()
+        {
+            GamePaused = true;
+            GamePlaying = false;
+            GameTimer.Stop();
         }
 
         private void GameTimer_Elapsed(object sender, ElapsedEventArgs e)

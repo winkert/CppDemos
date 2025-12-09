@@ -9,5 +9,7 @@ namespace TRW.GameLibraries.GameCore
     {
         Bitmap ObjectImage { get; set; }
         int ObjectId { get; set; }
+        int CollisionWidth { get; }
+        int CollisionHeight { get; }
     }
 }

@@ -8,55 +8,34 @@ using TRW.GameLibraries.GameCore;
 
 namespace TRW.Games.Pong.GameObjects
 {
-    internal class Ball : IVisibleGameObject
+    internal class Ball : PongGameObject
     {
+        const double Acceleration = 0.01;
+
         internal Ball(double initialSpeed, double maxLeft, double maxTop)
+            : base(maxLeft, maxTop, Statics.BallImage)
         {
             Speed = initialSpeed;
+            // Math - Velocity of X and Y as random values between 0 and Speed result in random diagonal movement
             VelocityX = Statics.R.NextDouble() * Speed;
             VelocityY = Statics.R.NextDouble() * Speed;
 
-            LeftOuterBound = maxLeft;
-            TopOuterBound = maxTop;
         }
 
-        public string Name => "Ball";
-
-        public string Description => "Pong Ball";
-
-        public bool IsPlayable => false;
-
-        public Bitmap ObjectImage { get; set; }
-        public int ObjectId { get; set; }
-
-        #region UI Positions
-        internal double Left { get; private set; }
-        internal double Top { get; private set; }
-        #endregion
-
-        System.Windows.Controls.Image _wpfImage;
-        public System.Windows.Controls.Image WpfImage
-        {
-            get
-            {
-                if (_wpfImage == null)
-                {
-                    _wpfImage = new System.Windows.Controls.Image() { Source = Statics.ToWpfImage(ObjectImage) };
-                    _wpfImage.Width = 30;
-                    _wpfImage.Height = 30;
-                }
-                return _wpfImage;
-            }
-        }
+        public override string Name => "Ball";
+        public override string Description => "Pong Ball";
+        public override bool IsPlayable => false;
 
         internal double Speed { get; private set; }
         internal double VelocityX { get; private set; }
         internal double VelocityY { get; private set; }
 
-        internal double LeftOuterBound { get; private set; }
-        internal double TopOuterBound { get; private set; }
+        internal bool Bouncing { get; set; } = false;
 
-        public void GameTimerTick()
+        public override double Width => 30.0;
+        public override double Height => 30.0;
+
+        public override void GameTimerTick()
         {
             if (WpfImage != null)
             {
@@ -72,14 +51,14 @@ namespace TRW.Games.Pong.GameObjects
                 double newLeft = currentLeft + VelocityX;
                 double newTop = currentTop + VelocityY;
 
-                if(newLeft >= LeftOuterBound)
+                if(newLeft >= LeftOuterBound || newLeft <= RightOuterBound)
                 {
-                    VelocityX *= -1;
+                    Contact(-1, 1);
                     newLeft = currentLeft + VelocityX;
                 }
-                if(newTop >= TopOuterBound)
+                if(newTop <= TopOuterBound || newTop >= BottomOuterBound)
                 {
-                    VelocityY *= -1;
+                    Contact(1, -1);
                     newTop = currentTop + VelocityY;
                 }
 
@@ -92,6 +71,21 @@ namespace TRW.Games.Pong.GameObjects
                     System.Windows.Controls.Canvas.SetTop(WpfImage, Top);
                 }));
             }
+            Bouncing = false;
         }
+
+        public void Contact(int xFlip, int yFlip)
+        {
+            if (Bouncing)
+                return;
+
+            Bouncing = true;
+            // increase speed and adjust velocity accordingly
+            Speed += Acceleration * Speed;
+            double angle = Math.Atan2(VelocityY, VelocityX);
+            VelocityX = Math.Cos(angle) * Speed * xFlip;
+            VelocityY = Math.Sin(angle) * Speed * yFlip;
+        }
+
     }
 }

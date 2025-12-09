@@ -25,6 +25,7 @@ namespace TRW.Games.Pong
         public const string NewGameMenuItem = "New Game";
         public const string ResumeGameMenuItem = "Resume Game";
         public const string SettingsMenuItem = "Settings";
+
         public const string ApplySettingsMenuItem = "Apply Settings";
         public const string ExitGameMenuItem = "Exit";
 

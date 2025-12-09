@@ -19,6 +19,11 @@ namespace TRW.GameLibraries.GameCore
         public decimal Weight { get; set; }
         public bool IsPlayable => false;
 
+        public virtual double X => throw new NotImplementedException();
+        public virtual double Y => throw new NotImplementedException();
+        public virtual double Width => throw new NotImplementedException();
+        public virtual double Height => throw new NotImplementedException();
+
         public void WriteTo(BinaryWriter writer)
         {
             writer.Write(Name);
@@ -50,6 +55,11 @@ namespace TRW.GameLibraries.GameCore
                 WriteTo(bw);
                 return ms.ToArray();
             }
+        }
+
+        public virtual bool CollidesWith(IGameObject otherGameObject)
+        {
+            throw new NotImplementedException();
         }
     }
 }
