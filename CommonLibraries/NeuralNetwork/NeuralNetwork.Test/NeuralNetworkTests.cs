@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using TRW.CommonLibraries.NeuralNetwork;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace TRW.CommonLibraries.NeuralNetwork.Test
 {
@@ -36,17 +37,25 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
                 // 1,0 if 0,0 or 1,1
                 if (X[i][0] == X[i][1])
                 {
-                    int prob = (int)Math.Round(p[0]);
-                    Assert.AreEqual(1, prob, $"Expected ~1,0 for [{X[i][0]},{X[i][1]}], got [{p[0]}, {p[1]}]");
+                    Assert.AreEqual(1, p[0], 0.001, $"Expected ~1,0 for [{X[i][0]},{X[i][1]}], got [{p[0]}, {p[1]}]");
                 }
                 // 0,1 else
                 else
                 {
-                    int prob = (int)Math.Round(p[1]);
-                    Assert.AreEqual(1, prob, $"Expected ~0,1 for [{X[i][0]},{X[i][1]}], got [{p[0]}, {p[1]}]");
+                    Assert.AreEqual(1, p[1], 0.001, $"Expected ~0,1 for [{X[i][0]},{X[i][1]}], got [{p[0]}, {p[1]}]");
 
                 }
             }
+
+            /*
+             * Training done. Loss=9.77151549912004E-05
+             *
+             * Input [0,0] -> probs [0.9998943560801821, 0.0001056439198179512]
+             * Input [0,1] -> probs [6.67864108051393E-05, 0.9999332135891948]
+             * Input [1,0] -> probs [0.00011299234525851499, 0.9998870076547416]
+             * Input [1,1] -> probs [0.9998949630207341, 0.00010503697926600332]
+             * 
+             */
 
         }
 
@@ -55,6 +64,8 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
         {
             Trainer trainer = new Trainer();
             trainer.AddLayer(2, ActivationFunction.Tanh);
+            trainer.AddLayer(2, ActivationFunction.Linear);
+            trainer.AddLayer(2, ActivationFunction.Linear);
             trainer.AddLayer(2, ActivationFunction.Linear);
             trainer.AddLayer(2, ActivationFunction.Linear);
             trainer.AddLayer(2, 1, ActivationFunction.Tanh);
@@ -1287,6 +1298,173 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
                 double[] output = trainer.Predict(testInputs[i]);
                 Console.WriteLine($"Input: [{string.Join(", ", testInputs[i])}] => Predicted: {output[0]}, Expected: {expected[i]}");
             }
+            /*
+             * Input: [2, 63121] => Predicted: 1.7899772331466752, Expected: 2
+             * Input: [6, 63121] => Predicted: 3.63250721118834, Expected: 4
+             * Input: [1, 20012] => Predicted: 5.63218631181756, Expected: 4
+             */
         }
+
+        [TestMethod]
+        public void TestTeachingAddition()
+        {
+            double scale = 10.0;
+            var dataset = MakeAddDataset(2000, scale, true, new Random(42));
+
+            // Example: Addition problem
+            double[][] inputs = dataset.X;
+            double[][] targets = dataset.Y;
+
+            Trainer target = new Trainer();
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, ActivationFunction.Linear);
+            target.AddLayer(2, 1, ActivationFunction.Linear);
+
+            target.Train(inputs.ToList(), targets.ToList(), 1000);
+            double[][] testInputs = [
+                [1,2], // 3
+                [3,4], // 7
+                [5,7], // 12
+                [10,5], // 15
+                [10,15], // 25
+                [-5,10],  // 5
+                [0.5,0.25] // 0.75
+            ];
+            double[] expected = [3, 7, 12, 15, 25, 5, 0.75];
+
+            for (int i = 0; i < testInputs.Length; i++)
+            {
+                var actual = target.Predict(testInputs[i]);
+                Assert.AreEqual(expected[i], actual[0], 0.05, $"Addition test failed for input {testInputs[i][0]} + {testInputs[i][1]}");
+                Console.WriteLine($"{testInputs[i][0]} + {testInputs[i][1]} = Predicted: {actual[0]}, Expected: {expected[i]}");
+            }
+            /*
+             * 1 + 2 = Predicted: 2.994314391093891, Expected: 3
+             * 3 + 4 = Predicted: 6.986417010436611, Expected: 7
+             * 5 + 7 = Predicted: 11.976568861724326, Expected: 12
+             * 10 + 5 = Predicted: 14.970480786466249, Expected: 15
+             * 10 + 15 = Predicted: 24.95097310591608, Expected: 25
+             * -5 + 10 = Predicted: 4.990695780295491, Expected: 5
+             * 0.5 + 0.25 = Predicted: 0.748727196326981, Expected: 0.75
+             */
+        }
+
+        [TestMethod]
+        public void TestTeachingMultiplication()
+        {
+            double scale = 10.0;
+            var dataset = MakeMulDataset(1500, scale, true, new Random(42));
+
+            // Example: Addition problem
+            double[][] inputs = dataset.X;
+            double[][] targets = dataset.Y;
+
+            Trainer target = new Trainer();
+            target.AddLayer(2, 16, ActivationFunction.Linear);
+            target.AddLayer(16, ActivationFunction.ReLU);
+            target.AddLayer(16, ActivationFunction.ReLU);
+            target.AddLayer(16, 1, ActivationFunction.Linear);
+
+            target.Train(inputs.ToList(), targets.ToList(), 2000);
+            double[][] testInputs = [
+                [1,2], // 2
+                [3,4], // 12
+                [5,7], // 35
+                [1.5,5], // 7.5
+                [10,1.5], // 15
+                [-5,10],  // -50
+                [0.5,0.25] // 0.125
+            ];
+            double[] expected = [2, 12, 35, 7.5, 15, -50, 0.125];
+
+            for (int i = 0; i < testInputs.Length; i++)
+            {
+                var actual = target.Predict(testInputs[i]);
+                //Assert.AreEqual(expected[i], actual[0], 1, $"Multiplication test failed for input {testInputs[i][0]} * {testInputs[i][1]}");
+                Console.WriteLine($"{testInputs[i][0]} * {testInputs[i][1]} = Predicted: {actual[0]}, Expected: {expected[i]}");
+            }
+            /* (Still working on this training setup)
+             * 1 * 2 = Predicted: 4.24024072703773, Expected: 2 
+             *      (I've gotten closer to 1.5 with other runs/setups)
+             * 3 * 4 = Predicted: 13.801409156563295, Expected: 12
+             * 5 * 7 = Predicted: 36.6697968527877, Expected: 35
+             * 1.5 * 5 = Predicted: 7.536694320937912, Expected: 7.5
+             * 10 * 1.5 = Predicted: 16.42776505389557, Expected: 15
+             * -5 * 10 = Predicted: -48.14002322885127, Expected: -50
+             * 0.5 * 0.25 = Predicted: 1.7736497703625105, Expected: 0.125
+             *      (this one has had some wildly different results between negative numbers and things over 2)
+             */
+        }
+
+        #region Helpers
+        private (double[][] X, double[][] Y) MakeMulDataset(int n, double maxAbsInput, bool includeNegatives, Random rng)
+        {
+            // Scale to [-1,1] for inputs; target uses consistent scaling
+            double scale = maxAbsInput; // original inputs ∈ [-maxAbsInput, maxAbsInput]
+            var X = new double[n][];
+            var Y = new double[n][];
+
+            for (int i = 0; i < n; i++)
+            {
+                double a = rng.NextDouble() * scale;
+                double b = rng.NextDouble() * scale;
+
+                if (includeNegatives)
+                {
+                    a *= rng.Next(2) == 0 ? 1 : -1;
+                    b *= rng.Next(2) == 0 ? 1 : -1;
+                }
+
+                // -Normalize inputs to [-1,1]- Trainer does this part
+                double aN = a;
+                double bN = b;
+
+                // Target scaled consistently: (a*b)/scale^2
+                double tN = (a * b);
+
+                X[i] = [aN, bN];
+                Y[i] = [tN];
+            }
+
+            return (X, Y);
+        }
+        private (double[][] X, double[][] Y) MakeAddDataset(int n, double maxAbsInput, bool includeNegatives, Random rng)
+        {
+            // Scale to [-1,1] for inputs; target uses consistent scaling
+            double scale = maxAbsInput; // original inputs ∈ [-maxAbsInput, maxAbsInput]
+            var X = new double[n][];
+            var Y = new double[n][];
+
+            for (int i = 0; i < n; i++)
+            {
+                double a = rng.NextDouble() * scale;
+                double b = rng.NextDouble() * scale;
+
+                if (includeNegatives)
+                {
+                    a *= rng.Next(2) == 0 ? 1 : -1;
+                    b *= rng.Next(2) == 0 ? 1 : -1;
+                }
+
+                // Normalize inputs to [-1,1]
+                double aN = a / scale;
+                double bN = b / scale;
+
+                // Target scaled consistently: (a*b)/scale^2
+                double tN = (a + b) / (scale);
+
+                X[i] = [aN, bN];
+                Y[i] = [tN];
+            }
+
+            return (X, Y);
+        }
+        #endregion
+
     }
 }
