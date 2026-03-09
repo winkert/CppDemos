@@ -1,4 +1,8 @@
-﻿using System.Numerics;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using TRW.CommonLibraries.NeuralNetwork;
 using static System.Formats.Asn1.AsnWriter;
 

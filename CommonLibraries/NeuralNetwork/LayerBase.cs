@@ -3,18 +3,19 @@
     public abstract class LayerBase : ILayer
     {
         private static readonly Random Rand = new();
+        private static readonly double SqrtTwoOverPi = Math.Sqrt(2 / Math.PI);
 
         public double[] Weights { get; set; }
         public double[] Biases { get; set; }
         protected double[] PostActivationVector { get; private set; }
         protected double[] PreActivationVector { get; private set; }
 
-        protected int InputSize => Weights.Length / Biases.Length;
-        protected int OutputSize => Biases.Length;
+        public long InputSize => Weights.Length / Biases.Length;
+        public long OutputSize => Biases.Length;
 
         public ActivationFunction ActivationFunction { get; set; }
 
-        public LayerBase(int inputSize, int outputSize, ActivationFunction activationFunction)
+        public LayerBase(long inputSize, long outputSize, ActivationFunction activationFunction)
         {
             Weights = new double[inputSize * outputSize];
             Biases = new double[outputSize];
@@ -72,6 +73,43 @@
         public static double LeakyReLU(double x, double alpha = 0.01) => x > 0 ? x : alpha * x;
         public static double LeakyReLUDerivative(double x, double alpha = 0.01) => x > 0 ? 1.0 : alpha;
 
+        public static double Swish(double x) => x / (1.0 + Math.Exp(-x));
+        public static double SwishDerivative(double x) => (1.0 - Math.Exp(-x));
+
+        public static double HardSwish(double x)
+        {
+            double hs = Math.Max(0.0, Math.Min(1.0, 0.2 * x + 0.5));
+            return x * hs;
+        }
+        public static double HardSwishDerivative(double x)
+        {
+            if (x <= -2.5) return 0.0;
+            if (x >= 2.5) return 1.0;
+            return 0.4 * x + 0.5;
+        }
+
+        public static double ELU(double x, double alpha = 1.0)=> x > 0 ? x : alpha * (Math.Exp(x) - 1.0);
+        public static double ELUDerivative(double x, double alpha = 1.0) => x > 0 ? 1.0 : alpha * Math.Exp(x);
+
+
+        public static double GELU(double x)
+        {
+            double inner = SqrtTwoOverPi * (x + 0.044715 * Math.Pow(x, 3));
+            return 0.5 * x * (1.0 + Math.Tanh(inner));
+        }
+        public static double GELUDerivative(double x)
+        {
+            double x3 = x * x * x;
+            double t = SqrtTwoOverPi * (x + 0.044715 * x3);
+            double tanhT = Math.Tanh(t);
+
+            double dt_dx = SqrtTwoOverPi * (1.0 + 3.0 * 0.044715 * x * x);
+            double sech2 = 1.0 - tanhT * tanhT;
+
+            return 0.5 * (1.0 + tanhT) + 0.5 * x * sech2 * dt_dx;
+        }
+
+
         public static double[] Softmax(double[] inputs)
         {
             double max = double.MinValue;
@@ -112,6 +150,10 @@
                 ActivationFunction.Tanh => Tanh(x),
                 ActivationFunction.ReLU => ReLU(x),
                 ActivationFunction.LeakyReLU => LeakyReLU(x),
+                ActivationFunction.Swish => Swish(x),
+                ActivationFunction.HardSwish => HardSwish(x),
+                ActivationFunction.ELU => ELU(x),
+                ActivationFunction.GELU => GELU(x),
                 _ => x,
             };
         }
@@ -125,10 +167,14 @@
                 ActivationFunction.Tanh => TanhDerivative(a),
                 ActivationFunction.ReLU => ReLUDerivative(x),
                 ActivationFunction.LeakyReLU => LeakyReLUDerivative(x),
+                ActivationFunction.Swish => SwishDerivative(x),
+                ActivationFunction.HardSwish => HardSwishDerivative(x),
+                ActivationFunction.ELU => ELUDerivative(x),
+                ActivationFunction.GELU => GELUDerivative(x),
                 _ => 1.0,
             };
         }
-        
+
         protected double[] ActivateArray(double[] x, ActivationFunction function)
         {
             if (function == ActivationFunction.Softmax)
@@ -154,7 +200,7 @@
             foreach (var b in Biases)
                 writer.Write(b);
         }
-        
+
         public virtual void Deserialize(System.IO.BinaryReader reader)
         {
             ActivationFunction = (ActivationFunction)reader.ReadInt32();
@@ -170,5 +216,6 @@
             PreActivationVector = new double[Biases.Length];
             PostActivationVector = new double[Biases.Length];
         }
+
     }
 }

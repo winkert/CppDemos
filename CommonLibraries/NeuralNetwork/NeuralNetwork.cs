@@ -10,11 +10,15 @@
         public bool StoredPredictionsEnabled { get; set; } = false;
         public double StoredBlendAlpha { get; set; } = 0.5;
 
+        public List<ILayer> Layers => _layers;
+        public long InputSize => _layers.Count > 0 ? _layers[0].InputSize : 0;
+        public long OutputSize => _layers.Count > 0 ? _layers.Last().OutputSize : 0;
+
         public NeuralNetwork() { }
 
         public void AddLayer(int inputSize, int outputSize, ActivationFunction activationFunction)
         {
-            ILayer layer = new NetworkLayer(inputSize, outputSize, activationFunction);
+            ILayer layer = new ActivationLayer(inputSize, outputSize, activationFunction);
             this.AddLayer(layer);
         }
 
