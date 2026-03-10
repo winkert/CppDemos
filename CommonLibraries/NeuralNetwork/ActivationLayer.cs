@@ -1,11 +1,27 @@
 ﻿namespace TRW.CommonLibraries.NeuralNetwork
 {
-    public class NetworkLayer : LayerBase
+    public class ActivationLayer : LayerBase
     {
-        public NetworkLayer(int inputSize, int outputSize, ActivationFunction activationFunction) : base(inputSize, outputSize, activationFunction)
+        public ActivationLayer() : base()
         {
         }
 
+        public ActivationLayer(long inputSize, long outputSize, ActivationFunction activationFunction) 
+            : base(inputSize, outputSize, activationFunction)
+        {
+        }
+
+        public ActivationLayer(double[] weights, double[] biases, ActivationFunction activationFunction)
+            : base(weights.Length / biases.Length, biases.Length, activationFunction)
+        {
+            if (weights.Length != biases.Length * InputSize)
+            {
+                throw new ArgumentException("Weights length must be equal to biases length multiplied by input size.");
+            }
+            Weights = weights;
+            Biases = biases;
+            ActivationFunction = activationFunction;
+        }
         public override double[] Forward(double[] inputs)
         {
             if(inputs.Length != InputSize)
@@ -17,7 +33,7 @@
             for (int o = 0; o < OutputSize; ++o)
             {
                 double s = 0.0;
-                int baseIdx = o * InputSize;
+                long baseIdx = o * InputSize;
                 for (int i = 0; i < InputSize; ++i)
                 {
                     s += Weights[baseIdx + i] * inputs[i];
@@ -59,7 +75,7 @@
 
             for (int o = 0; o < OutputSize; ++o)
             {
-                int baseIdx = o * InputSize;
+                long baseIdx = o * InputSize;
                 db[o] += dZ[o];
                 for (int i = 0; i < InputSize; ++i)
                 {
@@ -75,7 +91,7 @@
         {
             for(int o = 0; o < OutputSize; ++o)
             {
-                int baseIdx = o * (InputSize);
+                long baseIdx = o * (InputSize);
                 for(int i = 0; i < InputSize; ++i)
                 {
                     Weights[baseIdx + i] -= learningRate * (dW[baseIdx + i] + l2 * Weights[baseIdx + i]);

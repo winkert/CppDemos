@@ -4,6 +4,8 @@
     {
         double[] Weights { get; set; }
         double[] Biases { get; set; }
+        long InputSize { get; }
+        long OutputSize { get; }
         ActivationFunction ActivationFunction { get; }
         /// <summary>
         /// Computes the output of the model for the given input values.

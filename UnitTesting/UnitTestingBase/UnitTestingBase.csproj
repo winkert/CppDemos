@@ -12,6 +12,6 @@
     <None Remove="UnitTestingBase.csproj.vspscc" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MSTest.TestFramework" Version="3.10.4" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.1.0" />
   </ItemGroup>
 </Project>
