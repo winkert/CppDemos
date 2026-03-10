@@ -2,6 +2,10 @@
 {
     public class ActivationLayer : LayerBase
     {
+        public ActivationLayer() : base()
+        {
+        }
+
         public ActivationLayer(long inputSize, long outputSize, ActivationFunction activationFunction) 
             : base(inputSize, outputSize, activationFunction)
         {

@@ -15,6 +15,15 @@
 
         public ActivationFunction ActivationFunction { get; set; }
 
+        public LayerBase() 
+        { 
+            Weights = Array.Empty<double>();
+            Biases = Array.Empty<double>();
+            ActivationFunction = ActivationFunction.Linear;
+            PreActivationVector = Array.Empty<double>();
+            PostActivationVector = Array.Empty<double>();   
+        }
+
         public LayerBase(long inputSize, long outputSize, ActivationFunction activationFunction)
         {
             Weights = new double[inputSize * outputSize];
@@ -192,6 +201,7 @@
 
         public virtual void Serialize(System.IO.BinaryWriter writer)
         {
+            writer.Write("LAY");
             writer.Write((int)ActivationFunction);
             writer.Write(Weights.Length);
             foreach (var w in Weights)
@@ -203,6 +213,8 @@
 
         public virtual void Deserialize(System.IO.BinaryReader reader)
         {
+            string t = reader.ReadString();
+            // should be LAY
             ActivationFunction = (ActivationFunction)reader.ReadInt32();
             int weightsLength = reader.ReadInt32();
             Weights = new double[weightsLength];

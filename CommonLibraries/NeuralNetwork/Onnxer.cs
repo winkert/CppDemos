@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 ProducerName = "HomebrewNN"
             };
 
-            var graph = new GraphProto { Name = "HomebrewGraph" };
+            GraphProto graph = new GraphProto { Name = "HomebrewGraph" };
 
             string prevOutput = "input";
 
@@ -34,33 +35,15 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
             for (int i = 0; i < network.Layers.Count; i++)
             {
-                LayerBase layer = (LayerBase)network.Layers[i];
-                string wName = $"W{i}";
-                string bName = $"B{i}";
-                string gemmOut = $"GemmOut{i}";
-                string actOut = $"ActOut{i}";
-
-                // Add weights
-                graph.Initializer.Add(MakeTensor(wName, layer.Weights, [layer.OutputSize, layer.InputSize]));
-                graph.Initializer.Add(MakeTensor(bName, layer.Biases, [layer.OutputSize]));
-
-                // Gemm node
-                graph.Node.Add(new NodeProto
+                ILayer layer = (LayerBase)network.Layers[i];
+                if (layer is CompositeLayer)
                 {
-                    OpType = "Gemm",
-                    Input = { prevOutput, wName, bName },
-                    Output = { gemmOut }
-                });
-
-                // Activation node
-                graph.Node.Add(new NodeProto
+                    prevOutput = ExportCompositeLayer(graph, prevOutput, (CompositeLayer)layer);
+                }
+                else
                 {
-                    OpType = MapActivation(layer.ActivationFunction),
-                    Input = { gemmOut },
-                    Output = { actOut }
-                });
-
-                prevOutput = actOut;
+                    prevOutput = ExportBasicLayer(graph, prevOutput, i, layer);
+                }
             }
 
             // Define model output
@@ -83,33 +66,154 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
             var net = new NeuralNetwork();
 
-            // Build lookup for initializers
             var initMap = graph.Initializer.ToDictionary(i => i.Name);
 
-            // Iterate nodes in pairs: Gemm → Activation
-            for (int i = 0; i < graph.Node.Count; i++)
+            int i = 0;
+            while (i < graph.Node.Count)
             {
                 var node = graph.Node[i];
-                if (node.OpType != "Gemm") continue;
+                double[] W, B;
+                int outputSize, inputSize;
+                // Case 1: Dense layer (Gemm)
+                if (node.OpType == "Gemm")
+                {
+                    GetNodeAttributes(initMap, node, out W, out B, out outputSize, out inputSize);
 
-                string wName = node.Input[1];
-                string bName = node.Input[2];
+                    var dense = new DenseLayer(inputSize, outputSize)
+                    {
+                        Weights = W,
+                        Biases = B
+                    };
 
-                var W = initMap[wName].FloatData.Select(f => (double)f).ToArray();
-                var B = initMap[bName].FloatData.Select(f => (double)f).ToArray();
+                    // Look ahead for activation
+                    ActivationLayer? actLayer = null;
 
-                // Next node should be activation
-                var actNode = graph.Node[i + 1];
-                var act = MapActivation(actNode.OpType);
+                    if (i + 1 < graph.Node.Count && IsActivation(graph.Node[i + 1].OpType))
+                    {
+                        var actNode = graph.Node[i + 1];
+                        GetNodeAttributes(initMap, actNode, out _, out _, out int actOutputSize, out int actInputSize);
 
-                var layer = new ActivationLayer(W, B, act);
-                net.AddLayer(layer);
+                        actLayer = new ActivationLayer(actInputSize, actOutputSize, MapActivation(actNode.OpType));
+                        i += 1; // skip activation node
+                    }
+
+                    // Build composite block
+                    if (actLayer != null)
+                    {
+                        var block = new CompositeLayer(dense, actLayer);
+                        net.AddLayer(block);
+                    }
+                    else
+                    {
+                        // No activation, just add dense
+                        net.AddLayer(dense);
+                    }
+                }
+                else if (IsActivation(node.OpType))
+                {
+                    GetNodeAttributes(initMap, node, out W, out B, out outputSize, out inputSize);
+
+                    // Activation without preceding Gemm — rare but possible
+                    var act = new ActivationLayer(inputSize, outputSize, MapActivation(node.OpType));
+                    net.AddLayer(act);
+                }
+                else
+                {
+                    // Skip nodes that aren't layers (Reshape, Transpose, etc.)
+                }
+
+                i++;
             }
 
             return net;
         }
 
         #region Support Functions
+        private static void GetNodeAttributes(Dictionary<string, TensorProto> initMap, NodeProto node, out double[] W, out double[] B, out int outputSize, out int inputSize)
+        {
+            string wName = node.Input[1];
+            string bName = node.Input[2];
+
+            W = initMap[wName].FloatData.Select(f => (double)f).ToArray();
+            B = initMap[bName].FloatData.Select(f => (double)f).ToArray();
+            outputSize = B.Length;
+            inputSize = W.Length / outputSize;
+        }
+
+        private string ExportCompositeLayer(GraphProto graph, string prevOutput, CompositeLayer layer)
+        {
+            int nodeIndex = 0;
+            foreach (var subLayer in layer.SubLayers)
+            {
+                if (subLayer is DenseLayer dense)
+                {
+                    string wName = $"W{nodeIndex}";
+                    string bName = $"B{nodeIndex}";
+                    string gemmOut = $"GemmOut{nodeIndex}";
+
+                    graph.Initializer.Add(MakeTensor(wName, dense.Weights, new[] { (long)dense.Biases.Length, dense.Weights.Length / dense.Biases.Length }));
+                    graph.Initializer.Add(MakeTensor(bName, dense.Biases, new[] { (long)dense.Biases.Length }));
+
+                    graph.Node.Add(new NodeProto
+                    {
+                        OpType = "Gemm",
+                        Input = { prevOutput, wName, bName },
+                        Output = { gemmOut }
+                    });
+
+                    prevOutput = gemmOut;
+                    nodeIndex++;
+                }
+                else if (subLayer is ActivationLayer act)
+                {
+                    string actOut = $"ActOut{nodeIndex}";
+
+                    graph.Node.Add(new NodeProto
+                    {
+                        OpType = MapActivation(act.ActivationFunction),
+                        Input = { prevOutput },
+                        Output = { actOut }
+                    });
+
+                    prevOutput = actOut;
+                    nodeIndex++;
+                }
+            }
+            return prevOutput;
+        }
+
+        private string ExportBasicLayer(GraphProto graph, string prevOutput, int i, ILayer layer)
+        {
+            string wName = $"W{i}";
+            string bName = $"B{i}";
+            string gemmOut = $"GemmOut{i}";
+            string actOut = $"ActOut{i}";
+
+            // Add weights
+            graph.Initializer.Add(MakeTensor(wName, layer.Weights, [layer.OutputSize, layer.InputSize]));
+            graph.Initializer.Add(MakeTensor(bName, layer.Biases, [layer.OutputSize]));
+
+            // Gemm node
+            graph.Node.Add(new NodeProto
+            {
+                OpType = "Gemm",
+                Input = { prevOutput, wName, bName },
+                Output = { gemmOut }
+            });
+
+            // Activation node
+            graph.Node.Add(new NodeProto
+            {
+                OpType = MapActivation(layer.ActivationFunction),
+                Input = { gemmOut },
+                Output = { actOut }
+            });
+
+            prevOutput = actOut;
+            return prevOutput;
+        }
+
+
         private TensorProto MakeTensor(string name, double[] data, long[] dims)
         {
             var t = new TensorProto
@@ -167,6 +271,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 _ => ActivationFunction.Linear
             };
         }
+        private bool IsActivation(string op) =>
+        op is "Relu" or "Tanh" or "Sigmoid" or "Softmax" or "Gelu";
         #endregion
     }
 }

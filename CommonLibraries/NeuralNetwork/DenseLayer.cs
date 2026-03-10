@@ -1,75 +1,84 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TRW.CommonLibraries.NeuralNetwork
 {
     public class DenseLayer : LayerBase
     {
-        private readonly int _inputSize;
-        private readonly int _outputSize;
+        public DenseLayer() : base()
+        {
+        }
 
-        public DenseLayer(int inputSize, int outputSize)
+        public DenseLayer(long inputSize, long outputSize)
             : base(inputSize, outputSize, ActivationFunction.Linear)
         {
-            _inputSize = inputSize;
-            _outputSize = outputSize;
-            Weights = new double[inputSize * outputSize];
-            Biases = new double[outputSize];
         }
 
-        public override double[] Forward(double[] input)
+        public DenseLayer(double[] weights, double[] biases)
+            : base(weights.Length / biases.Length, biases.Length, ActivationFunction.Linear)
         {
-            double[] output = new double[_outputSize];
+            if (weights.Length != biases.Length * InputSize)
+                throw new ArgumentException("Weights length must be equal to biases length multiplied by input size.");
+            Weights = weights;
+            Biases = biases;
+            ActivationFunction = ActivationFunction.Linear;
+        }
 
-            for (int o = 0; o < _outputSize; o++)
+        public override double[] Forward(double[] inputs)
+        {
+            if (inputs.Length != InputSize)
+                throw new ArgumentException($"Input size [{inputs.Length}] does not match layer input size [{InputSize}].");
+
+            double[] z = PreActivationVector;
+            for (int o = 0; o < OutputSize; ++o)
             {
-                double sum = Biases[o];
-                for (int i = 0; i < _inputSize; i++)
-                    sum += Weights[o * _inputSize + i] * input[i];
-
-                output[o] = sum;
+                double s = 0.0;
+                long baseIdx = o * InputSize;
+                for (int i = 0; i < InputSize; ++i)
+                    s += Weights[baseIdx + i] * inputs[i];
+                z[o] = s + Biases[o];
             }
 
-            return output;
+            // For a pure dense/linear layer post-activation == pre-activation
+            for (int i = 0; i < z.Length; ++i)
+                PostActivationVector[i] = z[i];
+
+            return PostActivationVector;
         }
 
-        public override double[] Backward(double[] input,
-                                 double[] upstream,
-                                 double[] dW,
-                                 double[] db,
-                                 double learningRate)
+        public override double[] Backward(double[] input, double[] upstream, double[] dW, double[] db, double learningRate)
         {
-            double[] gradInput = new double[_inputSize];
+            if (input.Length != InputSize)
+                throw new ArgumentException("Input size does not match layer input size.");
 
-            // Compute gradients
-            for (int o = 0; o < _outputSize; o++)
+            // Linear layer: dZ == upstream
+            double[] dZ = upstream;
+            double[] deltaPrev = new double[InputSize];
+
+            for (int o = 0; o < OutputSize; ++o)
             {
-                db[o] += upstream[o];
-
-                for (int i = 0; i < _inputSize; i++)
+                long baseIdx = o * InputSize;
+                db[o] += dZ[o];
+                for (int i = 0; i < InputSize; ++i)
                 {
-                    dW[o * _inputSize + i] += upstream[o] * input[i];
-                    gradInput[i] += upstream[o] * Weights[o * _inputSize + i];
+                    dW[baseIdx + i] += dZ[o] * input[i];
+                    deltaPrev[i] += Weights[baseIdx + i] * dZ[o];
                 }
             }
 
-            // SGD update
-            for (int i = 0; i < Weights.Length; i++)
-                Weights[i] -= learningRate * dW[i];
-
-            for (int i = 0; i < Biases.Length; i++)
-                Biases[i] -= learningRate * db[i];
-
-            return gradInput;
+            return deltaPrev;
         }
 
         public override void UpdateWeights(double[] dW, double[] db, double learningRate, double l2)
         {
-            throw new NotImplementedException();
+            for (int o = 0; o < OutputSize; ++o)
+            {
+                long baseIdx = o * InputSize;
+                for (int i = 0; i < InputSize; ++i)
+                {
+                    Weights[baseIdx + i] -= learningRate * (dW[baseIdx + i] + l2 * Weights[baseIdx + i]);
+                }
+                Biases[o] -= learningRate * db[o];
+            }
         }
     }
-
 }
