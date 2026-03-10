@@ -90,9 +90,11 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
                     if (i + 1 < graph.Node.Count && IsActivation(graph.Node[i + 1].OpType))
                     {
+                        // Activation following Gemm usually operates on the Gemm output.
+                        // Activation input/output sizes should match the dense output size.
+                        int actInputSize = outputSize;
+                        int actOutputSize = outputSize;
                         var actNode = graph.Node[i + 1];
-                        GetNodeAttributes(initMap, actNode, out _, out _, out int actOutputSize, out int actInputSize);
-
                         actLayer = new ActivationLayer(actInputSize, actOutputSize, MapActivation(actNode.OpType));
                         i += 1; // skip activation node
                     }
@@ -111,10 +113,24 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 }
                 else if (IsActivation(node.OpType))
                 {
-                    GetNodeAttributes(initMap, node, out W, out B, out outputSize, out inputSize);
+                    // Activation without preceding Gemm — try to infer size from initializers if possible,
+                    // otherwise fall back to a minimal size to avoid index exceptions.
+                    int actInputSize = 1;
+                    int actOutputSize = 1;
 
-                    // Activation without preceding Gemm — rare but possible
-                    var act = new ActivationLayer(inputSize, outputSize, MapActivation(node.OpType));
+                    if (node.Input.Count > 0 && initMap.TryGetValue(node.Input[0], out var inputTensor) && inputTensor.Dims != null && inputTensor.Dims.Count > 0)
+                    {
+                        // try using last dimension as vector length
+                        actInputSize = (int)inputTensor.Dims[inputTensor.Dims.Count - 1];
+                        actOutputSize = actInputSize;
+                    }
+                    else if (node.Output.Count > 0 && initMap.TryGetValue(node.Output[0], out var outTensor) && outTensor.Dims != null && outTensor.Dims.Count > 0)
+                    {
+                        actOutputSize = (int)outTensor.Dims[outTensor.Dims.Count - 1];
+                        actInputSize = actOutputSize;
+                    }
+
+                    var act = new ActivationLayer(actInputSize, actOutputSize, MapActivation(node.OpType));
                     net.AddLayer(act);
                 }
                 else
@@ -131,11 +147,27 @@ namespace TRW.CommonLibraries.NeuralNetwork
         #region Support Functions
         private static void GetNodeAttributes(Dictionary<string, TensorProto> initMap, NodeProto node, out double[] W, out double[] B, out int outputSize, out int inputSize)
         {
+            // Validate inputs exist on node
+            if (node.Input == null || node.Input.Count < 3)
+                throw new ArgumentException($"Node '{node.OpType}' does not have the expected weight and bias inputs.");
+
             string wName = node.Input[1];
             string bName = node.Input[2];
 
-            W = initMap[wName].FloatData.Select(f => (double)f).ToArray();
-            B = initMap[bName].FloatData.Select(f => (double)f).ToArray();
+            if (!initMap.TryGetValue(wName, out var wTensor))
+                throw new KeyNotFoundException($"Weight initializer '{wName}' not found for node '{node.OpType}'.");
+
+            if (!initMap.TryGetValue(bName, out var bTensor))
+                throw new KeyNotFoundException($"Bias initializer '{bName}' not found for node '{node.OpType}'.");
+
+            // Expect FloatData to be populated (tests create FloatData). If missing, provide clearer error.
+            if (wTensor.FloatData == null || wTensor.FloatData.Count == 0)
+                throw new InvalidOperationException($"Weight initializer '{wName}' contains no FloatData.");
+            if (bTensor.FloatData == null || bTensor.FloatData.Count == 0)
+                throw new InvalidOperationException($"Bias initializer '{bName}' contains no FloatData.");
+
+            W = wTensor.FloatData.Select(f => (double)f).ToArray();
+            B = bTensor.FloatData.Select(f => (double)f).ToArray();
             outputSize = B.Length;
             inputSize = W.Length / outputSize;
         }
@@ -190,8 +222,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
             string actOut = $"ActOut{i}";
 
             // Add weights
-            graph.Initializer.Add(MakeTensor(wName, layer.Weights, [layer.OutputSize, layer.InputSize]));
-            graph.Initializer.Add(MakeTensor(bName, layer.Biases, [layer.OutputSize]));
+            graph.Initializer.Add(MakeTensor(wName, layer.Weights, new[] { layer.OutputSize, layer.InputSize }.Select(x => (long)x).ToArray()));
+            graph.Initializer.Add(MakeTensor(bName, layer.Biases, new[] { layer.OutputSize }.Select(x => (long)x).ToArray()));
 
             // Gemm node
             graph.Node.Add(new NodeProto
@@ -231,7 +263,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
             var tp = new TypeProto();
             var tt = new TypeProto.Types.Tensor
             {
-                ElemType = (int)type
+                ElemType = (int)type,
+                Shape = new TensorShapeProto()
             };
             foreach (var d in dims)
                 tt.Shape.Dim.Add(new TensorShapeProto.Types.Dimension { DimValue = d });
