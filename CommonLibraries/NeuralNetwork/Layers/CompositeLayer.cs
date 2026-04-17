@@ -12,7 +12,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
     /// </summary>
     public class CompositeLayer : ILayer
     {
-        private double[][] _forwardCache = Array.Empty<double[]>();
+        private double[][] _forwardCache = [];
 
         public List<ILayer> SubLayers { get; private set; }
 
@@ -41,7 +41,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
         public double[] Weights
         {
-            get => SubLayers.SelectMany(l => l.Weights).ToArray();
+            get => [.. SubLayers.SelectMany(l => l.Weights)];
             set
             {
                 int total = SubLayers.Sum(l => l.Weights.Length);
@@ -52,7 +52,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 foreach (var l in SubLayers)
                 {
                     int len = l.Weights.Length;
-                    l.Weights = value.Skip(pos).Take(len).ToArray();
+                    l.Weights = [.. value.Skip(pos).Take(len)];
                     pos += len;
                 }
             }
@@ -60,7 +60,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
         public double[] Biases
         {
-            get => SubLayers.SelectMany(l => l.Biases).ToArray();
+            get => [.. SubLayers.SelectMany(l => l.Biases)];
             set
             {
                 int total = SubLayers.Sum(l => l.Biases.Length);
@@ -71,7 +71,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 foreach (var l in SubLayers)
                 {
                     int len = l.Biases.Length;
-                    l.Biases = value.Skip(pos).Take(len).ToArray();
+                    l.Biases = [.. value.Skip(pos).Take(len)];
                     pos += len;
                 }
             }
@@ -209,6 +209,11 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 instance.Deserialize(reader);
                 SubLayers.Add(instance);
             }
+        }
+
+        protected void Add(ILayer layer)
+        {
+            SubLayers.Add(layer);
         }
     }
 }

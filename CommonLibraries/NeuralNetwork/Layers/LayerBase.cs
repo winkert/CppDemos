@@ -17,11 +17,11 @@
 
         public LayerBase() 
         { 
-            Weights = Array.Empty<double>();
-            Biases = Array.Empty<double>();
+            Weights = [];
+            Biases = [];
             ActivationFunction = ActivationFunction.Linear;
-            PreActivationVector = Array.Empty<double>();
-            PostActivationVector = Array.Empty<double>();   
+            PreActivationVector = [];
+            PostActivationVector = [];   
         }
 
         public LayerBase(long inputSize, long outputSize, ActivationFunction activationFunction)

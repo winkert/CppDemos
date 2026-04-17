@@ -30,7 +30,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             graph.Input.Add(new ValueInfoProto
             {
                 Name = "input",
-                Type = MakeTensorTypeProto(Onnx.TensorProto.Types.DataType.Float, new[] { 1, network.InputSize })
+                Type = MakeTensorTypeProto(Onnx.TensorProto.Types.DataType.Float, [1, network.InputSize])
             });
 
             for (int i = 0; i < network.Layers.Count; i++)
@@ -50,7 +50,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             graph.Output.Add(new ValueInfoProto
             {
                 Name = prevOutput,
-                Type = MakeTensorTypeProto(Onnx.TensorProto.Types.DataType.Float, new[] { 1, network.OutputSize })
+                Type = MakeTensorTypeProto(Onnx.TensorProto.Types.DataType.Float, [1, network.OutputSize])
             });
 
             model.Graph = graph;
@@ -166,8 +166,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
             if (bTensor.FloatData == null || bTensor.FloatData.Count == 0)
                 throw new InvalidOperationException($"Bias initializer '{bName}' contains no FloatData.");
 
-            W = wTensor.FloatData.Select(f => (double)f).ToArray();
-            B = bTensor.FloatData.Select(f => (double)f).ToArray();
+            W = [.. wTensor.FloatData.Select(f => (double)f)];
+            B = [.. bTensor.FloatData.Select(f => (double)f)];
             outputSize = B.Length;
             inputSize = W.Length / outputSize;
         }
@@ -183,8 +183,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
                     string bName = $"B{nodeIndex}";
                     string gemmOut = $"GemmOut{nodeIndex}";
 
-                    graph.Initializer.Add(MakeTensor(wName, dense.Weights, new[] { (long)dense.Biases.Length, dense.Weights.Length / dense.Biases.Length }));
-                    graph.Initializer.Add(MakeTensor(bName, dense.Biases, new[] { (long)dense.Biases.Length }));
+                    graph.Initializer.Add(MakeTensor(wName, dense.Weights, [(long)dense.Biases.Length, dense.Weights.Length / dense.Biases.Length]));
+                    graph.Initializer.Add(MakeTensor(bName, dense.Biases, [(long)dense.Biases.Length]));
 
                     graph.Node.Add(new NodeProto
                     {
@@ -222,8 +222,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
             string actOut = $"ActOut{i}";
 
             // Add weights
-            graph.Initializer.Add(MakeTensor(wName, layer.Weights, new[] { layer.OutputSize, layer.InputSize }.Select(x => (long)x).ToArray()));
-            graph.Initializer.Add(MakeTensor(bName, layer.Biases, new[] { layer.OutputSize }.Select(x => (long)x).ToArray()));
+            graph.Initializer.Add(MakeTensor(wName, layer.Weights, [.. new[] { layer.OutputSize, layer.InputSize }.Select(x => (long)x)]));
+            graph.Initializer.Add(MakeTensor(bName, layer.Biases, [.. new[] { layer.OutputSize }.Select(x => (long)x)]));
 
             // Gemm node
             graph.Node.Add(new NodeProto
