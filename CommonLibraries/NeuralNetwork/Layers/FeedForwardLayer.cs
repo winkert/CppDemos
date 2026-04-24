@@ -8,6 +8,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
 {
     public class FeedForwardLayer : CompositeLayer
     {
+        public FeedForwardLayer() :base() { }
         public FeedForwardLayer(int modelDim, int hiddenDim)
             : base()
         {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TRW.CommonLibraries.NeuralNetwork;
 
@@ -96,6 +97,30 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
             }
         }
 
+        [TestMethod]
+        public void TestSerializeTransformerNetwork()
+        {
+            NeuralNetwork target = TrainTransformerNetwork();
+            string tempFile = System.IO.Path.GetTempFileName();
+            target.Serialize(tempFile);
+            Assert.IsTrue(System.IO.File.Exists(tempFile), "Serialized file should exist.");
+            NeuralNetwork loaded = new NeuralNetwork();
+            loaded.Deserialize(tempFile);
+            Assert.AreEqual(target.Layers.Count, loaded.Layers.Count, "Layer count should match after deserialization.");
+        }
+
+        [TestMethod]
+        public void TestDeserializeTransformerNetwork()
+        {
+            NeuralNetwork target = TrainTransformerNetwork();
+            string tempFile = System.IO.Path.GetTempFileName();
+            target.Serialize(tempFile);
+            Assert.IsTrue(System.IO.File.Exists(tempFile), "Serialized file should exist.");
+            NeuralNetwork loaded = new NeuralNetwork();
+            loaded.Deserialize(tempFile);
+            Assert.AreEqual(target.Layers.Count, loaded.Layers.Count, "Layer count should match after deserialization.");
+        }
+
         private NeuralNetwork TrainXOr()
         {
             double[][] X = {
@@ -140,24 +165,9 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
             nn.AddLayer(6, 3, ActivationFunction.Softmax);
 
             // Prepare dataset: all 4-bit binary vectors (16 samples), class = sum(bits) % 3 (3 classes)
-            var X = new System.Collections.Generic.List<double[]>();
-            var Y = new System.Collections.Generic.List<double[]>();
-            for (int i = 0; i < 16; ++i)
-            {
-                double[] v = new double[4];
-                int sum = 0;
-                for (int b = 0; b < 4; ++b)
-                {
-                    v[b] = ((i >> b) & 1);
-                    sum += (int)v[b];
-                }
-                int label = sum % 3;
-                double[] o = new double[3];
-                o[label] = 1.0;
-
-                X.Add(v);
-                Y.Add(o);
-            }
+            var dataset = GenerateParityDataset(4, 3); // 4-bit parity dataset (16 samples, 3 classes)
+            var X = dataset.Item1;
+            var Y = dataset.Item2;
 
             double finalLoss = nn.TrainBatch(X, Y, 0.05, 1e-4, 2000, true);
             Console.WriteLine($"Complex network training done. Loss={finalLoss}\n");
@@ -170,6 +180,54 @@ namespace TRW.CommonLibraries.NeuralNetwork.Test
             }
 
             return nn;
+        }
+
+        private NeuralNetwork TrainTransformerNetwork()
+        {
+            NeuralNetwork nn = new NeuralNetwork();
+            nn.AddLayer(new TransformerBlock(4, 2, 4)); // 2 heads, d_model=4
+            nn.AddLayer(new CompositeLayer(4, 8, 4, ActivationFunction.ReLU)); // feedforward
+
+            // final classifier to match parity dataset (2 classes)
+            nn.AddLayer(4, 2, ActivationFunction.Softmax);
+
+            // need to mock data to train it - hard coded values that can be tested against after deserialization
+            var dataset = GenerateParityDataset(4); // 4-bit parity dataset (16 samples, 2 classes)
+            double finalLoss = nn.TrainBatch(dataset.Item1, dataset.Item2, 0.05, 1e-4, 2000, true);
+            Console.WriteLine($"Transformer network training done. Loss={finalLoss}\n");
+
+            // show a few predictions
+            for (int i = 0; i < 8; ++i)
+            {
+                double[] p = nn.Forward(dataset.Item1[i]);
+                Console.WriteLine($"Input [{string.Join(",", dataset.Item1[i])}] -> probs [{string.Join(", ", p.Select(x => x.ToString("F6")))}]");
+            }
+
+
+            return nn;
+        }
+
+        private Tuple<List<double[]>, List<double[]>> GenerateParityDataset(int bitCount, int classCount = 2)
+        {
+            var X = new List<double[]>();
+            var Y = new List<double[]>();
+            int sampleCount = 1 << bitCount; // 2^bitCount samples
+            for (int i = 0; i < sampleCount; ++i)
+            {
+                double[] v = new double[bitCount];
+                int sum = 0;
+                for (int b = 0; b < bitCount; ++b)
+                {
+                    v[b] = ((i >> b) & 1);
+                    sum += (int)v[b];
+                }
+                int label = sum % classCount; // distribute counts across requested number of classes
+                double[] o = new double[classCount];
+                o[label] = 1.0;
+                X.Add(v);
+                Y.Add(o);
+            }
+            return Tuple.Create(X, Y);
         }
     }
 }

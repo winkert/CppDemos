@@ -15,6 +15,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
         private double[] lastQ, lastK, lastV;
         private double[] lastAttention;
 
+        public MultiHeadAttentionLayer():base() { }
         public MultiHeadAttentionLayer(int modelDim, int headCount)
             : base(modelDim, modelDim, ActivationFunction.Linear)
         {

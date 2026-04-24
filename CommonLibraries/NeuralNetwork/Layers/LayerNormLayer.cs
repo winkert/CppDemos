@@ -11,6 +11,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
         private readonly int dim;
         private double[] lastInput;
 
+        public LayerNormLayer() : base() { }
         public LayerNormLayer(int dim)
             : base(dim, dim, ActivationFunction.Linear)
         {
