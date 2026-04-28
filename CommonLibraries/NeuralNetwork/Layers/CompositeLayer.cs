@@ -10,9 +10,9 @@ namespace TRW.CommonLibraries.NeuralNetwork
     /// Weights and biases are presented as the concatenation of the contained layers' weights/biases so
     /// the trainer can allocate a single gradient buffer per composite layer.
     /// </summary>
-    public class CompositeLayer : ILayer
+    public class CompositeLayer : LayerBase
     {
-        private double[][] _forwardCache = Array.Empty<double[]>();
+        private double[][] _forwardCache = [];
 
         public List<ILayer> SubLayers { get; private set; }
 
@@ -39,11 +39,14 @@ namespace TRW.CommonLibraries.NeuralNetwork
             };
         }
 
-        public double[] Weights
+        public override double[] Weights
         {
-            get => SubLayers.SelectMany(l => l.Weights).ToArray();
+            get => [.. SubLayers.SelectMany(l => l.Weights)];
             set
             {
+                // in LayerBase constructor we initialize Weights/Biases to empty arrays, so we should allow setting empty arrays here without error even if SubLayers is not yet populated.
+                if (SubLayers == null || SubLayers.Count == 0)
+                    return;
                 int total = SubLayers.Sum(l => l.Weights.Length);
                 if (value == null || value.Length != total)
                     throw new ArgumentException("Weights length does not match composite internal sizes.");
@@ -52,17 +55,20 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 foreach (var l in SubLayers)
                 {
                     int len = l.Weights.Length;
-                    l.Weights = value.Skip(pos).Take(len).ToArray();
+                    l.Weights = [.. value.Skip(pos).Take(len)];
                     pos += len;
                 }
             }
         }
 
-        public double[] Biases
+        public override double[] Biases
         {
-            get => SubLayers.SelectMany(l => l.Biases).ToArray();
+            get => [.. SubLayers.SelectMany(l => l.Biases)];
             set
             {
+                // in LayerBase constructor we initialize Weights/Biases to empty arrays, so we should allow setting empty arrays here without error even if SubLayers is not yet populated.
+                if (SubLayers == null || SubLayers.Count == 0)
+                    return;
                 int total = SubLayers.Sum(l => l.Biases.Length);
                 if (value == null || value.Length != total)
                     throw new ArgumentException("Biases length does not match composite internal sizes.");
@@ -71,17 +77,17 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 foreach (var l in SubLayers)
                 {
                     int len = l.Biases.Length;
-                    l.Biases = value.Skip(pos).Take(len).ToArray();
+                    l.Biases = [.. value.Skip(pos).Take(len)];
                     pos += len;
                 }
             }
         }
 
-        public long InputSize => SubLayers.Count > 0 ? SubLayers.First().InputSize : 0;
-        public long OutputSize => SubLayers.Count > 0 ? SubLayers.Last().OutputSize : 0;
-        public ActivationFunction ActivationFunction => SubLayers.Count > 0 ? SubLayers.Last().ActivationFunction : ActivationFunction.Linear;
+        public override long InputSize => SubLayers.Count > 0 ? SubLayers.First().InputSize : 0;
+        public override long OutputSize => SubLayers.Count > 0 ? SubLayers.Last().OutputSize : 0;
+        public override ActivationFunction ActivationFunction => SubLayers.Count > 0 ? SubLayers.Last().ActivationFunction : ActivationFunction.Linear;
 
-        public double[] Forward(double[] inputs)
+        public override double[] Forward(double[] inputs)
         {
             if (SubLayers.Count == 0)
                 throw new InvalidOperationException("CompositeLayer has no sublayers.");
@@ -100,7 +106,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             return current;
         }
 
-        public double[] Backward(double[] input, double[] upstream, double[] dW, double[] db, double learningRate)
+        public override double[] Backward(double[] input, double[] upstream, double[] dW, double[] db, double learningRate)
         {
             if (SubLayers.Count == 0)
                 throw new InvalidOperationException("CompositeLayer has no sublayers.");
@@ -149,7 +155,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             return grad;
         }
 
-        public void UpdateWeights(double[] dW, double[] db, double learningRate, double l2)
+        public override void UpdateWeights(double[] dW, double[] db, double learningRate, double l2)
         {
             if (SubLayers.Count == 0)
                 return;
@@ -177,7 +183,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             }
         }
 
-        public void Serialize(BinaryWriter writer)
+        public override void Serialize(BinaryWriter writer)
         {
             // Composite marker and sublayer count, then for each sublayer write its type name and delegate serialization
             writer.Write("COMP"); // composite marker
@@ -190,7 +196,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             }
         }
 
-        public void Deserialize(BinaryReader reader)
+        public override void Deserialize(BinaryReader reader)
         {
             string marker = reader.ReadString();
             if (marker != "COMP")
@@ -209,6 +215,11 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 instance.Deserialize(reader);
                 SubLayers.Add(instance);
             }
+        }
+
+        protected void Add(ILayer layer)
+        {
+            SubLayers.Add(layer);
         }
     }
 }

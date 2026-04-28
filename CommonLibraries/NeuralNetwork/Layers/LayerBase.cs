@@ -5,23 +5,23 @@
         private static readonly Random Rand = new();
         private static readonly double SqrtTwoOverPi = Math.Sqrt(2 / Math.PI);
 
-        public double[] Weights { get; set; }
-        public double[] Biases { get; set; }
+        public virtual double[] Weights { get; set; }
+        public virtual double[] Biases { get; set; }
         protected double[] PostActivationVector { get; private set; }
         protected double[] PreActivationVector { get; private set; }
 
-        public long InputSize => Weights.Length / Biases.Length;
-        public long OutputSize => Biases.Length;
+        public virtual long InputSize => Weights.Length / Biases.Length;
+        public virtual long OutputSize => Biases.Length;
 
-        public ActivationFunction ActivationFunction { get; set; }
+        public virtual ActivationFunction ActivationFunction { get; set; }
 
         public LayerBase() 
         { 
-            Weights = Array.Empty<double>();
-            Biases = Array.Empty<double>();
+            Weights = [];
+            Biases = [];
             ActivationFunction = ActivationFunction.Linear;
-            PreActivationVector = Array.Empty<double>();
-            PostActivationVector = Array.Empty<double>();   
+            PreActivationVector = [];
+            PostActivationVector = [];   
         }
 
         public LayerBase(long inputSize, long outputSize, ActivationFunction activationFunction)

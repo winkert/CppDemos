@@ -13,6 +13,9 @@ namespace TRW.CommonLibraries.NeuralNetwork
         {
         }
 
+        public DenseLayer(long inputSize, long outputSize, ActivationFunction activation)
+            : base(inputSize, outputSize, activation) { }
+
         public DenseLayer(double[] weights, double[] biases)
             : base(weights.Length / biases.Length, biases.Length, ActivationFunction.Linear)
         {
