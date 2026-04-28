@@ -8,10 +8,16 @@ namespace TRW.CommonLibraries.NeuralNetwork
 {
     public class ResidualAddLayer : LayerBase
     {
+        private readonly int dim;
+        
+        public override long InputSize => dim;
+        public override long OutputSize => dim;
+
         public ResidualAddLayer() :base() { }
         public ResidualAddLayer(int size)
             : base(size, size, ActivationFunction.Linear)
         {
+            dim = size;
             Weights = [];
             Biases = [];
         }

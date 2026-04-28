@@ -11,6 +11,9 @@ namespace TRW.CommonLibraries.NeuralNetwork
         private readonly int dim;
         private double[] lastInput;
 
+        public override long InputSize => dim;
+        public override long OutputSize => dim;
+
         public LayerNormLayer() : base() { }
         public LayerNormLayer(int dim)
             : base(dim, dim, ActivationFunction.Linear)

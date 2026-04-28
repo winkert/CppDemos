@@ -8,9 +8,8 @@ namespace TRW.CommonLibraries.NeuralNetwork
 {
     public class TransformerBlock : CompositeLayer
     {
-        public TransformerBlock() : base() { }
+        public TransformerBlock() { }
         public TransformerBlock(int modelDim, int headCount, int ffHidden)
-            :base()
         {
             Add(new LayerNormLayer(modelDim));
             Add(new MultiHeadAttentionLayer(modelDim, headCount));
