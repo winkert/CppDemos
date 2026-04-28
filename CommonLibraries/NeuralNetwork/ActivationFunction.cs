@@ -7,6 +7,10 @@
         Tanh,
         ReLU,
         LeakyReLU,
+        Swish,
+        HardSwish,
+        ELU,
+        GELU,
         Softmax
     }
 }

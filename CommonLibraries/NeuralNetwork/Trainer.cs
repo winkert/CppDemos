@@ -78,22 +78,22 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 _outputMax[i] = outputs.Max(x => x[i]);
             }
 
-            normInputs = inputs.Select(x => NormalizeVector(x, _inputMin, _inputMax)).ToList();
-            normOutputs = outputs.Select(y => NormalizeVector(y, _outputMin, _outputMax)).ToList();
+            normInputs = [.. inputs.Select(x => NormalizeVector(x, _inputMin, _inputMax))];
+            normOutputs = [.. outputs.Select(y => NormalizeVector(y, _outputMin, _outputMax))];
         }
 
         private double[] NormalizeVector(double[] vector, double[] min, double[] max)
         {
-            return vector.Select((val, i) =>
+            return [.. vector.Select((val, i) =>
                 (max[i] - min[i]) == 0 ? 0.0 : (val - min[i]) / (max[i] - min[i])
-            ).ToArray();
+            )];
         }
 
         private double[] DenormalizeVector(double[] vector, double[] min, double[] max)
         {
-            return vector.Select((val, i) =>
+            return [.. vector.Select((val, i) =>
                 val * (max[i] - min[i]) + min[i]
-            ).ToArray();
+            )];
         }
 
         private List<double[]> EncodeCategoricalInputs(List<string[]> inputs)
@@ -104,7 +104,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
             // Build encoding maps
             for (int i = 0; i < featureCount; i++)
             {
-                List<string> unique = inputs.Select(x => x[i]).Distinct().ToList();
+                List<string> unique = [.. inputs.Select(x => x[i]).Distinct()];
                 Dictionary<string, int> map = [];
                 for (int j = 0; j < unique.Count; j++)
                     map[unique[j]] = j;
@@ -123,7 +123,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
                     oneHot[_categoricalMaps[i][row[i]]] = 1.0;
                     vector.AddRange(oneHot);
                 }
-                encoded.Add(vector.ToArray());
+                encoded.Add([.. vector]);
             }
 
             return encoded;
@@ -131,7 +131,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
 
         private List<double[]> EncodeOneHotOutputs(List<string> labels)
         {
-            List<string> uniqueLabels = labels.Distinct().ToList();
+            List<string> uniqueLabels = [.. labels.Distinct()];
             _labelToIndex = uniqueLabels.Select((label, idx) => new { label, idx })
                                         .ToDictionary(x => x.label, x => x.idx);
             _indexToLabel = _labelToIndex.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
@@ -160,7 +160,7 @@ namespace TRW.CommonLibraries.NeuralNetwork
                 encoded.AddRange(oneHot);
             }
 
-            double[] output = _neuralNetwork.Forward(encoded.ToArray());
+            double[] output = _neuralNetwork.Forward([.. encoded]);
             int predictedIndex = Array.IndexOf(output, output.Max());
             return _indexToLabel[predictedIndex];
         }
