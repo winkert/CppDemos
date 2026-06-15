@@ -3,6 +3,14 @@
 #include <iostream>
 
 // compile with g++ src/main.cpp -o bin/app.exe -Iinclude -Llib -lglfw3 -lglew32 -lopengl32 -lgdi32
+// lib and include files from these sources:
+// - GLEW:
+//   - https://glew.sourceforge.net/
+//   - Included is 2.3.1-win32.zip
+// - GLFW:
+//   - https://www.glfw.org/download.html
+//  - Included is glfw-3.4.bin.WIN64.zip
+//  - Locally, I'm using Mingw-w64 to compile so I used that version of this dll
 
 int main() {
     // 1. Initialize GLFW
