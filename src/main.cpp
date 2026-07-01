@@ -25,12 +25,14 @@ void write_error(const char* message){
 }
 
 bool init_resources(void){
-    
+    GLchar infoLog[1024];
     vs = glCreateShader(GL_VERTEX_SHADER);
     const char *vs_source =
 		//"#version 100\n"  // OpenGL ES 2.0
-		"#version 120\n"  // OpenGL 2.1
-		"attribute vec2 coord2d;                  "
+		//"#version 120\n"  // OpenGL 2.1
+        "#version 460 core\n" // OpenGL 4.6
+		//"attribute vec2 coord2d;"
+        "in vec2 coord2d;"
 		"void main(void) {                        "
 		"  gl_Position = vec4(coord2d, 0.0, 1.0); "
 		"}";
@@ -38,14 +40,18 @@ bool init_resources(void){
     glCompileShader(vs);
     glGetShaderiv(vs, GL_COMPILE_STATUS, &compile_ok);
     if (!compile_ok) {
+        glGetShaderInfoLog(vs, sizeof(infoLog), nullptr, infoLog);
         write_error("Error in vertext shader");
+        write_error(infoLog);
         return false;
     }
 
     fs = glCreateShader(GL_FRAGMENT_SHADER);
     const char *fs_source =
         //"#version 100\n"  // OpenGL ES 2.0
-        "#version 120\n"  // OpenGL 2.1
+        //"#version 120\n"  // OpenGL 2.1
+        "#version 460 core\n" // OpenGL 4.6
+        "out vec4 gl_FragColor;"
         "void main(void) {        "
         "  gl_FragColor[0] = 0.0; "
         "  gl_FragColor[1] = 0.0; "
@@ -55,7 +61,9 @@ bool init_resources(void){
     glCompileShader(fs);
     glGetShaderiv(fs, GL_COMPILE_STATUS, &compile_ok);
     if (!compile_ok) {
+        glGetShaderInfoLog(fs, sizeof(infoLog), nullptr, infoLog);
         write_error("Error in fragment shader");
+        write_error(infoLog);
         return false;
     }
 
