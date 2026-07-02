@@ -2,8 +2,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include "common\shader_utils.h"
 
-// compile with g++ src/main.cpp -o bin/app.exe -Iinclude -Llib -lglfw3 -lglew32 -lopengl32 -lgdi32
+// compile with g++ src/*.cpp, src/common/*.cpp -o bin/app.exe -Iinclude -Llib -lglfw3 -lglew32 -lopengl32 -lgdi32
 // lib and include files from these sources:
 // - GLEW:
 //   - https://glew.sourceforge.net/
@@ -18,7 +19,7 @@
 //   - Whatever I generated does not compile locally, so I am excluding the include but leaving it here for reference
 
 GLint compile_ok = GL_FALSE, link_ok = GL_FALSE;
-GLuint vs, fs, program, attribute_coord2d;
+GLuint vs, fs, program, attribute_coord2d, u_r, u_g, u_b, u_alpha;
 
 void write_error(const char* message){
     std::cerr << message << std::endl;
@@ -27,15 +28,7 @@ void write_error(const char* message){
 bool init_resources(void){
     GLchar infoLog[1024];
     vs = glCreateShader(GL_VERTEX_SHADER);
-    const char *vs_source =
-		//"#version 100\n"  // OpenGL ES 2.0
-		//"#version 120\n"  // OpenGL 2.1
-        "#version 460 core\n" // OpenGL 4.6
-		//"attribute vec2 coord2d;"
-        "in vec2 coord2d;"
-		"void main(void) {                        "
-		"  gl_Position = vec4(coord2d, 0.0, 1.0); "
-		"}";
+    const char *vs_source = file_read("shaders/vertex.glsl");
     glShaderSource(vs, 1, &vs_source, NULL);
     glCompileShader(vs);
     glGetShaderiv(vs, GL_COMPILE_STATUS, &compile_ok);
@@ -47,16 +40,7 @@ bool init_resources(void){
     }
 
     fs = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fs_source =
-        //"#version 100\n"  // OpenGL ES 2.0
-        //"#version 120\n"  // OpenGL 2.1
-        "#version 460 core\n" // OpenGL 4.6
-        "out vec4 gl_FragColor;"
-        "void main(void) {        "
-        "  gl_FragColor[0] = 0.0; "
-        "  gl_FragColor[1] = 0.0; "
-        "  gl_FragColor[2] = 1.0; "
-        "}";
+    const char *fs_source = file_read("shaders/fragment.glsl");
     glShaderSource(fs, 1, &fs_source, NULL);
     glCompileShader(fs);
     glGetShaderiv(fs, GL_COMPILE_STATUS, &compile_ok);
@@ -73,16 +57,17 @@ bool init_resources(void){
 	glLinkProgram(program);
 	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
 	if (!link_ok) {
+        glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
 		write_error("Error in glLinkProgram");
+        write_error(infoLog);
 		return false;
 	}
 
-    const char* attribute_name = "coord2d";
-	attribute_coord2d = glGetAttribLocation(program, attribute_name);
-	if (attribute_coord2d == -1) {
-		write_error("Could not bind attribute");
-		return false;
-	}
+	u_r = glGetUniformLocation(program, "r");
+	u_g = glGetUniformLocation(program, "g");
+	u_b = glGetUniformLocation(program, "b");
+	u_alpha = glGetUniformLocation(program, "alpha");
+    attribute_coord2d = glGetAttribLocation(program, "coord2d");
 
     return true;
 }
@@ -92,6 +77,12 @@ void render(GLFWwindow* window){
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(program);
+    
+	glUniform1f(u_r, 0.6f);
+ glUniform1f(u_g, 0.0f);
+ glUniform1f(u_b, 0.3f);
+    glUniform1f(u_alpha, 1.0f);
+    
 	glEnableVertexAttribArray(attribute_coord2d);
     GLfloat triangle_vertices[] = {
     0.0,  0.8,
@@ -108,7 +99,7 @@ void render(GLFWwindow* window){
 		0,                 // no extra data between each position
 		triangle_vertices  // pointer to the C array
 						  );
-	
+    
 	/* Push each element in buffer_vertices to the vertex shader */
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	
