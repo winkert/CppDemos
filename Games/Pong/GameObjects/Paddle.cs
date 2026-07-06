@@ -1,5 +1,6 @@
 ﻿using System;
 using TRW.GameLibraries.GameCore;
+using TRW.Games.Pong.PongAI;
 
 namespace TRW.Games.Pong.GameObjects
 {
@@ -35,32 +36,45 @@ namespace TRW.Games.Pong.GameObjects
 
         public override void GameTimerTick()
         {
-            if(CollidesWith(_ball))
+            if (CollidesWith(_ball))
             {
                 _ball.Contact(-1, 1);
             }
 
-            // if AI controlled, move paddle using neural network
-            if(Player is Player.Computer)
+            // todo : if AI controlled, move paddle using neural network
+            if (Player is Player.Computer)
             {
+                if (PongTrainer.UseAIModel)
+                {
+                    if (PongTrainer.MovePaddle(_ball, this))
+                    {
+                        // go up
+                        MovePaddle(Speed * -1);
+                    }
+                    else
+                    {
+                        MovePaddle(Speed);
+                    }
+                }
                 double ballCenterY = _ball.Top + (_ball.Height / 2);
                 double paddleCenterY = Top + (Height / 2);
-                if(ballCenterY < paddleCenterY)
+                if (ballCenterY < paddleCenterY)
                 {
                     MovePaddle(Speed * -1);
                 }
-                else if(ballCenterY > paddleCenterY)
+                else if (ballCenterY > paddleCenterY)
                 {
                     MovePaddle(Speed);
                 }
             }
             else
             {
-                if(MovingUp)
+                PongAI.PongTrainer.AddTrainingData(_ball, this, MovingUp);
+                if (MovingUp)
                 {
                     MovePaddle(Speed * -1);
                 }
-                if(MovingDown)
+                if (MovingDown)
                 {
                     MovePaddle(Speed);
                 }
@@ -70,41 +84,25 @@ namespace TRW.Games.Pong.GameObjects
 
         public void KeyEvent(string keyPressed)
         {
-                switch(keyPressed)
-                {
-                    case "Up":
-                        MovePaddle(Speed * -1);
-                        break;
-                    case "Down":
-                        MovePaddle(Speed);
-                        break;
-                }
+            switch (keyPressed)
+            {
+                case "Up":
+                    MovePaddle(Speed * -1);
+                    break;
+                case "Down":
+                    MovePaddle(Speed);
+                    break;
+            }
         }
 
 
         private void MovePaddle(double movement)
         {
-            if (WpfImage != null)
-            {
-                
-                WpfImage.Dispatcher.Invoke(new Action(() =>
-                {
-                    Left = System.Windows.Controls.Canvas.GetLeft(WpfImage);
-                    Top = System.Windows.Controls.Canvas.GetTop(WpfImage);
-                }));
-                
-                Top += movement;
-                if (Top <= TopOuterBound)
-                    Top = TopOuterBound;
-                if (Top >= BottomOuterBound)
-                    Top = BottomOuterBound;
-
-                WpfImage.Dispatcher.Invoke(new Action(() =>
-                {
-                    System.Windows.Controls.Canvas.SetTop(WpfImage, Top);
-                    System.Windows.Controls.Canvas.SetLeft(WpfImage, Left);
-                }));
-            }
+            Top += movement;
+            if (Top <= TopOuterBound)
+                Top = TopOuterBound;
+            if (Top >= BottomOuterBound)
+                Top = BottomOuterBound;
         }
     }
 }

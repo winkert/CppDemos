@@ -23,7 +23,10 @@ namespace TRW.CommonLibraries.NeuralNetwork
         {
             _neuralNetwork = new NeuralNetwork();
         }
-
+        public void AddLayer(ILayer layer)
+        {
+            _neuralNetwork.AddLayer(layer);
+        }
         public void AddLayer(int neuronCount, ActivationFunction activation)
         {
             AddLayer(neuronCount, neuronCount, activation);

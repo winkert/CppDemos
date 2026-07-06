@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media.Media3D;
 using TRW.GameLibraries.GameCore;
 
 namespace TRW.Games.Pong.GameObjects
@@ -25,21 +21,6 @@ namespace TRW.Games.Pong.GameObjects
             TopOuterBound = 0;
             RightOuterBound = 0;
             BottomOuterBound = maxTop - Height;
-        }
-
-        System.Windows.Controls.Image? _wpfImage;
-        public System.Windows.Controls.Image WpfImage
-        {
-            get
-            {
-                if (_wpfImage == null)
-                {
-                    _wpfImage = new System.Windows.Controls.Image() { Source = Statics.ToWpfImage(ObjectImage) };
-                    _wpfImage.Width = Width;
-                    _wpfImage.Height = Height;
-                }
-                return _wpfImage;
-            }
         }
 
         public Bitmap ObjectImage { get; set; }

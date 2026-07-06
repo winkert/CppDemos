@@ -36,41 +36,27 @@ namespace TRW.Games.Pong.GameObjects
         public override double Height => 30.0;
 
         public override void GameTimerTick()
-        {
-            if (WpfImage != null)
+        { 
+            double currentLeft = Left;
+            double currentTop = Top;
+
+            double newLeft = currentLeft + VelocityX;
+            double newTop = currentTop + VelocityY;
+
+            if(newLeft >= LeftOuterBound || newLeft <= RightOuterBound)
             {
-                WpfImage.Dispatcher.Invoke(new Action(() =>
-                {
-                    Left = System.Windows.Controls.Canvas.GetLeft(WpfImage);
-                    Top = System.Windows.Controls.Canvas.GetTop(WpfImage);
-                }));
-
-                double currentLeft = Left;
-                double currentTop = Top;
-
-                double newLeft = currentLeft + VelocityX;
-                double newTop = currentTop + VelocityY;
-
-                if(newLeft >= LeftOuterBound || newLeft <= RightOuterBound)
-                {
-                    Contact(-1, 1);
-                    newLeft = currentLeft + VelocityX;
-                }
-                if(newTop <= TopOuterBound || newTop >= BottomOuterBound)
-                {
-                    Contact(1, -1);
-                    newTop = currentTop + VelocityY;
-                }
-
-                Left = newLeft;
-                Top = newTop;
-
-                WpfImage.Dispatcher.Invoke(new Action(() =>
-                {
-                    System.Windows.Controls.Canvas.SetLeft(WpfImage, Left);
-                    System.Windows.Controls.Canvas.SetTop(WpfImage, Top);
-                }));
+                Contact(-1, 1);
+                newLeft = currentLeft + VelocityX;
             }
+            if(newTop <= TopOuterBound || newTop >= BottomOuterBound)
+            {
+                Contact(1, -1);
+                newTop = currentTop + VelocityY;
+            }
+
+            Left = newLeft;
+            Top = newTop;
+
             Bouncing = false;
         }
 
