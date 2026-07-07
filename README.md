@@ -4,4 +4,4 @@ Generally, I learn best through doing and teaching. To that end, this repository
 ## Contents
 * Main.cpp in this src/ root is the starter project. As I move forward in this learning exercise, I'll add new folders and projects.
 * include/shaders/*.glsl
-** These are shader fragment files. The purpose is to keep the c++ code cleaner by moving shader logic to files
+* * These are shader fragment files. The purpose is to keep the c++ code cleaner by moving shader logic to files

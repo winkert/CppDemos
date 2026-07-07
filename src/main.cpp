@@ -19,7 +19,7 @@
 //   - Whatever I generated does not compile locally, so I am excluding the include but leaving it here for reference
 
 GLint compile_ok = GL_FALSE, link_ok = GL_FALSE;
-GLuint vs, fs, program, attribute_coord2d, u_r, u_g, u_b, u_alpha;
+GLuint vs, fs, program, attribute_coord2d, u_r, u_g, u_b, u_alpha, u_time;
 
 void write_error(const char* message){
     std::cerr << message << std::endl;
@@ -68,6 +68,8 @@ bool init_resources(void){
 	u_b = glGetUniformLocation(program, "b");
 	u_alpha = glGetUniformLocation(program, "alpha");
     attribute_coord2d = glGetAttribLocation(program, "coord2d");
+    u_time = glGetUniformLocation(program, "time");
+
 
     return true;
 }
@@ -77,12 +79,17 @@ void render(GLFWwindow* window){
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(program);
+    double curr_s = glfwGetTime();
+    //std::cout << "Current time (glfwGetTime): " << curr_s << std::endl;
     
 	glUniform1f(u_r, 0.6f);
- glUniform1f(u_g, 0.0f);
- glUniform1f(u_b, 0.3f);
+    glUniform1f(u_g, 0.0f);
+    glUniform1f(u_b, 0.3f);
     glUniform1f(u_alpha, 1.0f);
-    
+
+    // make the triangle move
+    glUniform1f(u_time, (float)curr_s);
+
 	glEnableVertexAttribArray(attribute_coord2d);
     GLfloat triangle_vertices[] = {
     0.0,  0.8,
