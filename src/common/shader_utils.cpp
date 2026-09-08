@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <filesystem>
+#include <windows.h>
 
 using namespace std;
 
@@ -61,4 +62,44 @@ void print_log(GLuint object) {
 	
 	cerr << log;
 	free(log);
+}
+
+bool get_shader_paths(std::filesystem::path& vertex_shader_path, std::filesystem::path& fragment_shader_path) {
+	
+	// this is default - assume current path is the bin directory
+	std::filesystem::path shader_dir = std::filesystem::current_path() / "shaders";
+
+	if(!std::filesystem::exists(shader_dir)) {
+		try{
+			// need to determine OS and then set the shader_dir accordingly
+			#ifdef _WIN32
+			wchar_t this_process_path[MAX_PATH];
+			
+			GetModuleFileNameW(NULL, this_process_path, sizeof(this_process_path) / sizeof(wchar_t));
+			std::wcout << L"Unicode path of this app: " << this_process_path << std::endl;
+			shader_dir = std::filesystem::path(this_process_path).parent_path() / "shaders";
+			#elif __linux__
+			// try to get symlink to current process
+			std::filesystem::path exe_path = std::filesystem::read_symlink("/proc/self/exe");
+			shader_dir = exe_path.parent_path().parent_path() / "shaders";
+			#else
+			std::cerr << "Unsupported OS" << std::endl;
+			return false;
+			#endif
+		}
+		catch (const std::exception& e) {
+			std::cerr << "Error determining shader directory: " << e.what() << std::endl;
+			return false;
+		}
+
+		// one final check
+		if(!std::filesystem::exists(shader_dir)) {
+			std::cerr << "Shader directory not found: " << shader_dir << std::endl;
+			return false;
+		}
+	}
+
+	vertex_shader_path = shader_dir / "vertex.glsl";
+	fragment_shader_path = shader_dir / "fragment.glsl";
+	return true;
 }

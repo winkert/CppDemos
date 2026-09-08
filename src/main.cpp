@@ -2,6 +2,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <filesystem>
 #include "shader_utils.h"
 
 // compile with 
@@ -30,9 +31,14 @@ void write_error(const char* message){
 }
 
 bool init_resources(void){
+    std::filesystem::path vertex_shader_path, fragment_shader_path;
+    if(!get_shader_paths(vertex_shader_path, fragment_shader_path)) {
+        return false;
+    }
+    
     GLchar infoLog[1024];
     vs = glCreateShader(GL_VERTEX_SHADER);
-    const char *vs_source = file_read("shaders/vertex.glsl");
+    const char *vs_source = file_read(vertex_shader_path.string().c_str());
     glShaderSource(vs, 1, &vs_source, NULL);
     glCompileShader(vs);
     glGetShaderiv(vs, GL_COMPILE_STATUS, &compile_ok);
@@ -44,7 +50,7 @@ bool init_resources(void){
     }
 
     fs = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fs_source = file_read("shaders/fragment.glsl");
+    const char *fs_source = file_read(fragment_shader_path.string().c_str());
     glShaderSource(fs, 1, &fs_source, NULL);
     glCompileShader(fs);
     glGetShaderiv(fs, GL_COMPILE_STATUS, &compile_ok);
