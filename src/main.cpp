@@ -2,9 +2,13 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include "common\shader_utils.h"
+#include "shader_utils.h"
 
-// compile with g++ src/*.cpp, src/common/*.cpp -o bin/app.exe -Iinclude -Llib -lglfw3 -lglew32 -lopengl32 -lgdi32
+// compile with 
+// WINDOWS:
+//  g++ src/*.cpp, src/common/*.cpp -o bin/app.exe -Iinclude -Isrc/common -Llib -lglfw3 -lglew32 -lopengl32 -lgdi32
+// LINUX:
+//  g++ src/*.cpp src/common/*.cpp -o bin/app -Iinclude -Isrc/common -lGL -lglfw -lGLEW 
 // lib and include files from these sources:
 // - GLEW:
 //   - https://glew.sourceforge.net/
