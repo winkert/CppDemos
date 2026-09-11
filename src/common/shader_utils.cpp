@@ -3,8 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <filesystem>
+#ifdef _WIN32
 #include <windows.h>
-
+#endif
 using namespace std;
 
 char* file_read(const char* filename)
