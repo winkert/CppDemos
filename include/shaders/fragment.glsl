@@ -1,4 +1,4 @@
-#version 460 core
+#version 410 core
 in vec3 vertPos;
 out vec4 FragColor;
 uniform float r;

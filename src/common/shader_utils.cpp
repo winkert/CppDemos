@@ -82,7 +82,7 @@ bool get_shader_paths(std::filesystem::path& vertex_shader_path, std::filesystem
 			#elif __linux__
 			// try to get symlink to current process
 			std::filesystem::path exe_path = std::filesystem::read_symlink("/proc/self/exe");
-			shader_dir = exe_path.parent_path().parent_path() / "shaders";
+			shader_dir = exe_path.parent_path() / "shaders";
 			#else
 			std::cerr << "Unsupported OS" << std::endl;
 			return false;
