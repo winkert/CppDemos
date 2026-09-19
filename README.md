@@ -6,8 +6,8 @@ Generally, I learn best through doing and teaching. To that end, this repository
 * include/shaders/*.glsl
 * * These are shader fragment files. The purpose is to keep the c++ code cleaner by moving shader logic to files
 * common/
-** shader_utils - This handles getting the shader files and and creating the shaders
-** render_object - This handles rendering of each object/element being created in the scene
+* * shader_utils - This handles getting the shader files and and creating the shaders
+* * render_object - This handles rendering of each object/element being created in the scene
 
 ## Notes
 * I had a bit of an aha moment one night looking at (https://learnopengl.com/Getting-started/Hello-Triangle) and the solution to some of the exercises. For example, I learned how to draw multiple objects using multiple arrays etc. My thought now is I should have some kind of "RenderObject" class that contains a reference to the VAO and what kind of array it is drawing (GL_TRIANGLES, 0, 3). Then create multiples of those in an array that is looped to render in sequence.
