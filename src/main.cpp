@@ -3,7 +3,9 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <filesystem>
+#include <math.h>
 #include "shader_utils.h"
+#include "render_object.h"
 
 // compile with 
 // WINDOWS:
@@ -25,6 +27,8 @@
 
 GLint compile_ok = GL_FALSE, link_ok = GL_FALSE;
 GLuint vs, fs, program, attribute_coord2d, u_r, u_g, u_b, u_alpha, u_time;
+GLuint vertex_arrays[1], vertex_buffers[1];
+RenderObject objects[1];
 
 void write_error(const char* message){
     std::cerr << message << std::endl;
@@ -36,6 +40,12 @@ bool init_resources(void){
         return false;
     }
     
+    // log renderer info
+    const GLubyte* renderer = glGetString(GL_RENDERER); // get renderer string
+    const GLubyte* version = glGetString(GL_VERSION); // version as a string
+    std::cout << "Renderer: " << renderer << std::endl;
+    std::cout << "OpenGL version supported: " << version << std::endl;
+
     GLchar infoLog[1024];
     vs = glCreateShader(GL_VERTEX_SHADER);
     const char *vs_source = file_read(vertex_shader_path.string().c_str());
@@ -80,8 +90,73 @@ bool init_resources(void){
     attribute_coord2d = glGetAttribLocation(program, "coord2d");
     u_time = glGetUniformLocation(program, "time");
 
+    glDeleteShader(vs);
+    glDeleteShader(fs);
 
     return true;
+}
+
+void add_element(GLfloat* vertices, unsigned int index, unsigned int vertices_count = 3, unsigned int dimensions = 2){
+    // for some reason using this does not work
+    glBindVertexArray(vertex_arrays[index]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffers[index]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(
+        attribute_coord2d, // attribute
+        dimensions,                 // number of elements per vertex, here (x,y)
+        GL_FLOAT,          // the type of each element
+        GL_FALSE,          // take our values as-is
+        0,                  // no space between data
+        NULL  // pointer to the C array
+    );
+
+    objects[index] = RenderObject();
+    objects[index].init({vertex_arrays[index], vertex_buffers[index], program, GL_TRIANGLES, 0, vertices_count, false, false, false});
+    
+    glEnableVertexAttribArray(attribute_coord2d);
+}
+
+void init_buffers(void){
+    GLfloat vertices[] = {
+    0.0,  0.8,
+    -0.8, -0.8,
+    0.8, -0.8,
+    };
+   float firstTriangle[] = {
+        -0.9f, -0.5f, 0.0f,  // left 
+        -0.0f, -0.5f, 0.0f,  // right
+        -0.45f, 0.5f, 0.0f,  // top 
+    };
+    float secondTriangle[] = {
+        0.0f, -0.5f, 0.0f,  // left
+        0.9f, -0.5f, 0.0f,  // right
+        0.45f, 0.5f, 0.0f   // top 
+    };
+
+    glGenVertexArrays(1, vertex_arrays);
+    glGenBuffers(1, vertex_buffers);
+
+    //add_element(vertices, 0);
+    //add_element(firstTriangle, 1, 3);
+    //add_element(secondTriangle, 2, 3);
+
+    glBindVertexArray(vertex_arrays[0]);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffers[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(
+        attribute_coord2d, // attribute
+        2,                 // number of elements per vertex, here (x,y)
+        GL_FLOAT,          // the type of each element
+        GL_FALSE,          // take our values as-is
+        0,                  // no space between data
+        NULL  // pointer to the C array
+    );
+    
+    objects[0] = RenderObject();
+    objects[0].init({vertex_arrays[0], vertex_buffers[0], program, GL_TRIANGLES, 0, 3, false, false, false});
+    
+    glEnableVertexAttribArray(attribute_coord2d);
+
 }
 
 void render(GLFWwindow* window){
@@ -93,38 +168,24 @@ void render(GLFWwindow* window){
     //std::cout << "Current time (glfwGetTime): " << curr_s << std::endl;
     
 	glUniform1f(u_r, 0.6f);
-    glUniform1f(u_g, 0.0f);
-    glUniform1f(u_b, 0.3f);
-    glUniform1f(u_alpha, 1.0f);
+    glUniform1f(u_g, 0.4f);
+    glUniform1f(u_b, 0.2f);
+    glUniform1f(u_alpha, sin(curr_s));
 
     // make the triangle move
     glUniform1f(u_time, (float)curr_s);
 
-	glEnableVertexAttribArray(attribute_coord2d);
-    GLfloat triangle_vertices[] = {
-    0.0,  0.8,
-    -0.8, -0.8,
-    0.8, -0.8,
-    };
-
-    /* Describe our vertices array to OpenGL (it can't guess its format automatically) */
-    glVertexAttribPointer(
-		attribute_coord2d, // attribute
-		2,                 // number of elements per vertex, here (x,y)
-		GL_FLOAT,          // the type of each element
-		GL_FALSE,          // take our values as-is
-		0,                 // no extra data between each position
-		triangle_vertices  // pointer to the C array
-						  );
-    
-	/* Push each element in buffer_vertices to the vertex shader */
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+    for (const auto& obj : objects) {
+        obj.render();
+    }
 	
-	glDisableVertexAttribArray(attribute_coord2d);
-
 }
 
 void cleanup_resources(void){
+    glDisableVertexAttribArray(attribute_coord2d);
+    glDeleteVertexArrays(1, vertex_arrays);
+    glDeleteBuffers(1, vertex_buffers);
+    glDeleteProgram(program);
 
 }
 
@@ -154,10 +215,16 @@ int main() {
         return -1;
     }
 
+      // Request an OpenGL 4.1, core, context from GLFW.
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 1 );
+    glfwWindowHint( GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE );
+    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+
     // 2. Create a windowed mode window and its OpenGL context
     GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", nullptr, nullptr);
     if (!window) {
-        std::cout << "Failed to create window\n";
+        write_error("Failed to create window\n");
         glfwTerminate();
         return -1;
     }
@@ -167,14 +234,16 @@ int main() {
 
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
-        std::cout << "Failed to initialize GLEW\n";
+        write_error("Failed to initialize GLEW\n");
         return -1;
     }
 
     if(!init_resources()){
-        std::cout << "Failed to initialize resources\n";
+        write_error("Failed to initialize resources\n");
         return -1;
     }
+
+    init_buffers();
 
     mainloop(window);
 
