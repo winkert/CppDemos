@@ -9,6 +9,8 @@ Generally, I learn best through doing and teaching. To that end, this repository
 * * shader_utils - This handles getting the shader files and and creating the shaders
 * * render_object - This handles rendering of each object/element being created in the scene
 
-## Notes
+## Notes (stream of consciousness as I go)
 * I had a bit of an aha moment one night looking at (https://learnopengl.com/Getting-started/Hello-Triangle) and the solution to some of the exercises. For example, I learned how to draw multiple objects using multiple arrays etc. My thought now is I should have some kind of "RenderObject" class that contains a reference to the VAO and what kind of array it is drawing (GL_TRIANGLES, 0, 3). Then create multiples of those in an array that is looped to render in sequence.
 * I implemented (with some help from Copilot) a RenderObject and it does work (with at least one object) so this is a good start
+* One thing I would like to implement next is to embed the color details into the RenderObject. This would mean setting the color values in each render() call instead of one time at the top of the render method.
+* I had lost the tutorial I was following (I think I was following a specific tutorial) so now I'm freelwheeling a bit. Building architecture and abstractions around this code is what I guess I do when I have lost my direction.

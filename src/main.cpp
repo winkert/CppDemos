@@ -24,11 +24,11 @@
 //   - https://glad.dav1d.de/
 //   - I generated a custom loader for OpenGL 4.6 core profile and downloaded
 //   - Whatever I generated does not compile locally, so I am excluding the include but leaving it here for reference
-
+const unsigned int RENDEROBJECT_COUNT = 3;
 GLint compile_ok = GL_FALSE, link_ok = GL_FALSE;
 GLuint vs, fs, program, attribute_coord2d, u_r, u_g, u_b, u_alpha, u_time;
-GLuint vertex_arrays[1], vertex_buffers[1];
-RenderObject objects[1];
+GLuint vertex_arrays[RENDEROBJECT_COUNT], vertex_buffers[RENDEROBJECT_COUNT];
+RenderObject objects[RENDEROBJECT_COUNT];
 
 void write_error(const char* message){
     std::cerr << message << std::endl;
@@ -97,17 +97,18 @@ bool init_resources(void){
 }
 
 void add_element(GLfloat* vertices, unsigned int index, unsigned int vertices_count = 3, unsigned int dimensions = 2){
-    // for some reason using this does not work
+    // vertices is a pointer to an array - NOT the array itself. 
+    // sizeof(vertices) will return the size of the pointer, not the array. So we need to pass in the number of vertices as a parameter.
     glBindVertexArray(vertex_arrays[index]);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffers[index]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices_count * dimensions * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(
         attribute_coord2d, // attribute
         dimensions,                 // number of elements per vertex, here (x,y)
         GL_FLOAT,          // the type of each element
         GL_FALSE,          // take our values as-is
         0,                  // no space between data
-        NULL  // pointer to the C array
+        nullptr  // pointer to the C array
     );
 
     objects[index] = RenderObject();
@@ -133,30 +134,12 @@ void init_buffers(void){
         0.45f, 0.5f, 0.0f   // top 
     };
 
-    glGenVertexArrays(1, vertex_arrays);
-    glGenBuffers(1, vertex_buffers);
+    glGenVertexArrays(RENDEROBJECT_COUNT, vertex_arrays);
+    glGenBuffers(RENDEROBJECT_COUNT, vertex_buffers);
 
-    //add_element(vertices, 0);
-    //add_element(firstTriangle, 1, 3);
-    //add_element(secondTriangle, 2, 3);
-
-    glBindVertexArray(vertex_arrays[0]);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffers[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(
-        attribute_coord2d, // attribute
-        2,                 // number of elements per vertex, here (x,y)
-        GL_FLOAT,          // the type of each element
-        GL_FALSE,          // take our values as-is
-        0,                  // no space between data
-        NULL  // pointer to the C array
-    );
-    
-    objects[0] = RenderObject();
-    objects[0].init({vertex_arrays[0], vertex_buffers[0], program, GL_TRIANGLES, 0, 3, false, false, false});
-    
-    glEnableVertexAttribArray(attribute_coord2d);
-
+    add_element(vertices, 0);
+    add_element(firstTriangle, 1, 3, 3);
+    add_element(secondTriangle, 2, 3, 3);
 }
 
 void render(GLFWwindow* window){
@@ -183,8 +166,8 @@ void render(GLFWwindow* window){
 
 void cleanup_resources(void){
     glDisableVertexAttribArray(attribute_coord2d);
-    glDeleteVertexArrays(1, vertex_arrays);
-    glDeleteBuffers(1, vertex_buffers);
+    glDeleteVertexArrays(RENDEROBJECT_COUNT, vertex_arrays);
+    glDeleteBuffers(RENDEROBJECT_COUNT, vertex_buffers);
     glDeleteProgram(program);
 
 }
