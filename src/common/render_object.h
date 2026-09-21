@@ -17,6 +17,7 @@ public:
         bool ownsVbo = false;
         bool ownsProgram = false;
     };
+    float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
     RenderObject();
     ~RenderObject();

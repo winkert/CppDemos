@@ -1,10 +1,11 @@
 #version 410 core
-in vec2 coord2d;
+layout(location = 0) in vec3 vertex_position;
+layout(location = 1) in vec3 vertex_color;
 uniform float time;
-out vec3 vertPos;
+out vec3 color;
 void main(void) {
-    vec3 pos = vec3(coord2d, 0.0);
+    vec3 pos = vertex_position;
     pos.y += sin(time);
-    vertPos = pos;
+    color = vertex_color;
     gl_Position = vec4(pos, 1.0);
 }   

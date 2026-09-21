@@ -47,8 +47,6 @@ void RenderObject::render() const {
     glUseProgram(program);
     glBindVertexArray(vertex_array);
     glDrawArrays(render_mode, static_cast<GLint>(first_vertex), static_cast<GLsizei>(vertex_count));
-    glBindVertexArray(0);
-    glUseProgram(0);
 }
 
 void RenderObject::cleanup() {
