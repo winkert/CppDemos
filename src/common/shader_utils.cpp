@@ -40,7 +40,6 @@ char* file_read(const char* filename)
   	return res;
 }
 
-
 void print_log(GLuint object) {
 	GLint log_length = 0;
 	if (glIsShader(object)) {
@@ -65,8 +64,7 @@ void print_log(GLuint object) {
 	free(log);
 }
 
-bool get_shader_paths(std::filesystem::path& vertex_shader_path, std::filesystem::path& fragment_shader_path) {
-	
+bool get_shader_paths(std::filesystem::path& vertex_shader_path, std::filesystem::path& fragment_shader_path) {	
 	// this is default - assume current path is the bin directory
 	std::filesystem::path shader_dir = std::filesystem::current_path() / "shaders";
 

@@ -27,7 +27,6 @@
 const unsigned int RENDEROBJECT_COUNT = 3;
 const unsigned int VERTEX_LOCATION = 0;
 const unsigned int COLOR_LOCATION = 1;
-
 GLint compile_ok = GL_FALSE, link_ok = GL_FALSE;
 GLuint vs, fs, program, u_r, u_g, u_b, u_alpha, u_time;
 GLuint vertex_arrays[RENDEROBJECT_COUNT], vertex_buffers[RENDEROBJECT_COUNT], color_buffers[RENDEROBJECT_COUNT];
@@ -40,6 +39,79 @@ void write_error(const char* message){
 template<typename... T>
 void write_log(const T&... messages){
     (std::cout << ... << messages) << std::endl;
+}
+
+bool load_shaders(void){
+    GLchar infoLog[1024];
+    std::filesystem::path vertex_shader_path, fragment_shader_path;
+    if(!get_shader_paths(vertex_shader_path, fragment_shader_path)) {
+        return false;
+    }
+
+    vs = glCreateShader(GL_VERTEX_SHADER);
+    const char *vs_source = file_read(vertex_shader_path.string().c_str());
+    glShaderSource(vs, 1, &vs_source, NULL);
+    glCompileShader(vs);
+    glGetShaderiv(vs, GL_COMPILE_STATUS, &compile_ok);
+    if (!compile_ok) {
+        glGetShaderInfoLog(vs, sizeof(infoLog), nullptr, infoLog);
+        write_error("Error in vertext shader");
+        write_error(infoLog);
+        return false;
+    }
+    write_log("Vertex shader compiled successfully. ID: ", vs);
+
+    fs = glCreateShader(GL_FRAGMENT_SHADER);
+    const char *fs_source = file_read(fragment_shader_path.string().c_str());
+    glShaderSource(fs, 1, &fs_source, NULL);
+    glCompileShader(fs);
+    glGetShaderiv(fs, GL_COMPILE_STATUS, &compile_ok);
+    if (!compile_ok) {
+        glGetShaderInfoLog(fs, sizeof(infoLog), nullptr, infoLog);
+        write_error("Error in fragment shader");
+        write_error(infoLog);
+        return false;
+    }
+    write_log("Fragment shader compiled successfully. ID: ", fs);
+
+    program = glCreateProgram();
+	glAttachShader(program, vs);
+	glAttachShader(program, fs);
+    
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
+	if (!link_ok) {
+        glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
+		write_error("Error in glLinkProgram");
+        write_error(infoLog);
+		return false;
+	}
+
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    return true;
+}
+
+bool bind_shaders(){
+    glBindAttribLocation(program, VERTEX_LOCATION, "vertex_position");
+    glBindAttribLocation(program, COLOR_LOCATION, "vertex_color");
+
+    u_r = glGetUniformLocation(program, "r");
+    u_g = glGetUniformLocation(program, "g");
+    u_b = glGetUniformLocation(program, "b");
+    u_alpha = glGetUniformLocation(program, "alpha");
+    u_time = glGetUniformLocation(program, "time");
+
+    write_log("Shader program compiled and linked successfully.");
+    write_log("shader program ID: ", program);
+    write_log("Uniform 'r' location: ", u_r);
+    write_log("Uniform 'g' location: ", u_g);
+    write_log("Uniform 'b' location: ", u_b);
+    write_log("Uniform 'alpha' location: ", u_alpha);
+    write_log("Uniform 'time' location: ", u_time);
+
+    return true;
 }
 
 bool init_resources(void){
@@ -56,66 +128,17 @@ bool init_resources(void){
     write_log("Renderer: ", renderer);
     write_log("OpenGL version supported: ", version);
 
-    GLchar infoLog[1024];
-    vs = glCreateShader(GL_VERTEX_SHADER);
-    const char *vs_source = file_read(vertex_shader_path.string().c_str());
-    glShaderSource(vs, 1, &vs_source, NULL);
-    glCompileShader(vs);
-    glGetShaderiv(vs, GL_COMPILE_STATUS, &compile_ok);
-    if (!compile_ok) {
-        glGetShaderInfoLog(vs, sizeof(infoLog), nullptr, infoLog);
-        write_error("Error in vertext shader");
-        write_error(infoLog);
+    if(!load_shaders()) {
         return false;
     }
 
-    fs = glCreateShader(GL_FRAGMENT_SHADER);
-    const char *fs_source = file_read(fragment_shader_path.string().c_str());
-    glShaderSource(fs, 1, &fs_source, NULL);
-    glCompileShader(fs);
-    glGetShaderiv(fs, GL_COMPILE_STATUS, &compile_ok);
-    if (!compile_ok) {
-        glGetShaderInfoLog(fs, sizeof(infoLog), nullptr, infoLog);
-        write_error("Error in fragment shader");
-        write_error(infoLog);
+    if(!bind_shaders()) {
         return false;
     }
-
-    program = glCreateProgram();
-	glAttachShader(program, vs);
-	glAttachShader(program, fs);
-    
-    glBindAttribLocation(program, VERTEX_LOCATION, "vertex_position");
-    glBindAttribLocation(program, COLOR_LOCATION, "vertex_color");
-
-	glLinkProgram(program);
-	glGetProgramiv(program, GL_LINK_STATUS, &link_ok);
-	if (!link_ok) {
-        glGetProgramInfoLog(program, sizeof(infoLog), nullptr, infoLog);
-		write_error("Error in glLinkProgram");
-        write_error(infoLog);
-		return false;
-	}
-
-	u_r = glGetUniformLocation(program, "r");
-	u_g = glGetUniformLocation(program, "g");
-	u_b = glGetUniformLocation(program, "b");
-	u_alpha = glGetUniformLocation(program, "alpha");
-    u_time = glGetUniformLocation(program, "time");
-
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-
-    write_log("Shader program compiled and linked successfully.");
-    write_log("shader program ID: ", program);
-    write_log("Uniform 'r' location: ", u_r);
-    write_log("Uniform 'g' location: ", u_g);
-    write_log("Uniform 'b' location: ", u_b);
-    write_log("Uniform 'alpha' location: ", u_alpha);
-    write_log("Uniform 'time' location: ", u_time);
 
     return true;
 }
+
 
 void add_element(GLfloat* vertices, GLfloat* colors, unsigned int index, unsigned int vertices_count = 3, unsigned int dimensions = 2){
     // previous iterations of this code used sizeof(vertices) to determine the number of vertices, but that is incorrect.
@@ -134,22 +157,25 @@ void add_element(GLfloat* vertices, GLfloat* colors, unsigned int index, unsigne
         nullptr  // pointer to the C array
     );
 
-    glBindBuffer(GL_ARRAY_BUFFER, color_buffers[index]);
-    glBufferData(GL_ARRAY_BUFFER, vertices_count * 4 * sizeof(GLfloat), colors, GL_STATIC_DRAW);
-    glVertexAttribPointer(
-        COLOR_LOCATION, // attribute
-        4,                     // number of elements per vertex, here (r,g,b,a)
-        GL_FLOAT,          // the type of each element
-        GL_FALSE,          // take our values as-is
-        0,                  // no space between data
-        nullptr  // pointer to the C array
-    );
+    glEnableVertexAttribArray(VERTEX_LOCATION);
+
+    if(colors != nullptr){
+        glBindBuffer(GL_ARRAY_BUFFER, color_buffers[index]);
+        glBufferData(GL_ARRAY_BUFFER, vertices_count * 4 * sizeof(GLfloat), colors, GL_STATIC_DRAW);
+        glVertexAttribPointer(
+            COLOR_LOCATION, // attribute
+            4,                     // number of elements per vertex, here (r,g,b,a)
+            GL_FLOAT,          // the type of each element
+            GL_FALSE,          // take our values as-is
+            0,                  // no space between data
+            nullptr  // pointer to the C array
+        );
+        glEnableVertexAttribArray(COLOR_LOCATION);
+    }
 
     objects[index] = RenderObject();
     objects[index].init({vertex_arrays[index], vertex_buffers[index], program, GL_TRIANGLES, 0, vertices_count, false, false, false});
     
-    glEnableVertexAttribArray(VERTEX_LOCATION);
-    glEnableVertexAttribArray(COLOR_LOCATION);
 }
 
 void init_buffers(void){
@@ -179,8 +205,8 @@ void init_buffers(void){
     glGenBuffers(RENDEROBJECT_COUNT, color_buffers);
 
     add_element(vertices, colors, 0);
-    add_element(firstTriangle, colors, 1, 3, 3);
-    add_element(secondTriangle, colors, 2, 3, 3);
+    add_element(firstTriangle, nullptr, 1, 3, 3);
+    add_element(secondTriangle, nullptr, 2, 3, 3);
     
 }
 
@@ -191,10 +217,15 @@ void render(GLFWwindow* window){
     glUseProgram(program);
     double curr_s = glfwGetTime();
 
-    objects[0].color[0] = 0.6f;
-    objects[0].color[1] = 0.8f;
-    objects[0].color[2] = 0.2f;
-    objects[0].color[3] = 0.5f;
+    objects[1].color[0] = 0.6f;
+    objects[1].color[1] = 0.8f;
+    objects[1].color[2] = 0.2f;
+    objects[1].color[3] = 1.0f;
+
+    objects[2].color[0] = 0.8f;
+    objects[2].color[1] = 0.6f;
+    objects[2].color[2] = 1.0f;
+    objects[2].color[3] = 1.0f;
 
     // make the triangle move
     glUniform1f(u_time, (float)curr_s);
@@ -219,6 +250,8 @@ void cleanup_resources(void){
 
 void mainloop(GLFWwindow* window){
     while (!glfwWindowShouldClose(window)) {
+        static bool reload_in_progress = false;
+
         // --- Input ---
         glfwPollEvents();
 
@@ -227,6 +260,30 @@ void mainloop(GLFWwindow* window){
            glfwSetWindowShouldClose(window, GLFW_TRUE);
         }
 
+        /*
+         * I tried to follow the logic here [https://github.com/capnramses/antons_opengl_tutorials_book/blob/master/41_shader_hot_reload/main.c]
+         * I'm not sure the exact reason it doesn't work with my current setup. I suspect my abstractions are different enough that it doesn't work.
+         * Still, something to keep hacking at.
+        bool reload_key_pressed = glfwGetKey(window, GLFW_KEY_F5) == GLFW_PRESS;
+        if (reload_key_pressed && !reload_in_progress) {
+            reload_in_progress = true;
+        }
+        else if (!reload_key_pressed && reload_in_progress) {
+            // key released
+            reload_in_progress = false;
+            // reload/refresh
+            write_log("Reloading shaders...");
+            
+            if(!load_shaders()){
+                write_error("Failed to reload shaders");
+                exit(-1);
+            }
+            if(!bind_shaders()){
+                write_error("Failed to bind shaders");
+                exit(-1);
+            }
+        }
+        */
         // --- Rendering ---
         render(window);
 
